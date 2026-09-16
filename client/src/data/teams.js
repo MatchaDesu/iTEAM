@@ -1,87 +1,165 @@
 const teams = [
   {
     id: 1,
-    name: "Web Development",
+    name: "Campus Connect",
     description:
-      "Building a modern web application for university students.",
+      "Building a modern web application to help university students connect and collaborate.",
     category: "Web",
-    skills: ["React", "Node.js", "UI/UX"],
     members: 3,
     maxMembers: 5,
+    usePositions: true,
 
-    teamMembers: [
+    positions: [
       {
         id: 101,
-        name: "Alex",
-        role: "Frontend Developer",
+        positionId: "frontend-developer",
+        name: "Frontend Developer",
+        maxMembers: 1,
       },
       {
         id: 102,
-        name: "Beam",
-        role: "Backend Developer",
+        positionId: "backend-developer",
+        name: "Backend Developer",
+        maxMembers: 1,
       },
       {
         id: 103,
+        positionId: "ui-ux-designer",
+        name: "UI/UX Designer",
+        maxMembers: 2,
+      },
+    ],
+
+    teamMembers: [
+      {
+        id: 1001,
+        name: "Alex",
+        positionId: 101,
+        positionName: "Frontend Developer",
+      },
+      {
+        id: 1002,
+        name: "Beam",
+        positionId: 102,
+        positionName: "Backend Developer",
+      },
+      {
+        id: 1003,
         name: "Mew",
-        role: "UI/UX Designer",
+        positionId: 103,
+        positionName: "UI/UX Designer",
       },
     ],
   },
 
   {
     id: 2,
-    name: "Mobile App",
+    name: "Campus Mobile",
     description:
-      "Creating a mobile application to make campus life easier.",
+      "Creating a mobile application to make campus life easier for students.",
     category: "Mobile",
-    skills: ["Flutter", "UI/UX", "Firebase"],
     members: 2,
     maxMembers: 4,
+    usePositions: true,
 
-    teamMembers: [
+    positions: [
       {
         id: 201,
-        name: "Ploy",
-        role: "Mobile Developer",
+        positionId: "mobile-developer",
+        name: "Mobile Developer",
+        maxMembers: 2,
       },
       {
         id: 202,
+        positionId: "ui-ux-designer",
+        name: "UI/UX Designer",
+        maxMembers: 1,
+      },
+      {
+        id: 203,
+        positionId: "project-manager",
+        name: "Project Manager",
+        maxMembers: 1,
+      },
+    ],
+
+    teamMembers: [
+      {
+        id: 2001,
+        name: "Ploy",
+        positionId: 201,
+        positionName: "Mobile Developer",
+      },
+      {
+        id: 2002,
         name: "June",
-        role: "UI/UX Designer",
+        positionId: 202,
+        positionName: "UI/UX Designer",
       },
     ],
   },
 
   {
     id: 3,
-    name: "Game Development",
+    name: "Creative Game Studio",
     description:
       "Looking for teammates to build a small multiplayer game.",
     category: "Game",
-    skills: ["Unity", "C#", "Game Design"],
     members: 4,
     maxMembers: 5,
+    usePositions: true,
 
-    teamMembers: [
+    positions: [
       {
         id: 301,
-        name: "Max",
-        role: "Game Developer",
+        positionId: "game-developer",
+        name: "Game Developer",
+        maxMembers: 2,
       },
       {
         id: 302,
-        name: "Kim",
-        role: "Game Designer",
+        positionId: "game-designer",
+        name: "Game Designer",
+        maxMembers: 1,
       },
       {
         id: 303,
-        name: "Palm",
-        role: "Programmer",
+        positionId: "graphic-designer",
+        name: "Graphic Designer",
+        maxMembers: 1,
       },
       {
         id: 304,
+        positionId: "other",
+        name: "Sound Designer",
+        maxMembers: 1,
+      },
+    ],
+
+    teamMembers: [
+      {
+        id: 3001,
+        name: "Max",
+        positionId: 301,
+        positionName: "Game Developer",
+      },
+      {
+        id: 3002,
+        name: "Kim",
+        positionId: 302,
+        positionName: "Game Designer",
+      },
+      {
+        id: 3003,
+        name: "Palm",
+        positionId: 301,
+        positionName: "Game Developer",
+      },
+      {
+        id: 3004,
         name: "Nina",
-        role: "Artist",
+        positionId: 303,
+        positionName: "Graphic Designer",
       },
     ],
   },
@@ -90,51 +168,104 @@ const teams = [
     id: 4,
     name: "AI Research",
     description:
-      "Exploring practical applications of machine learning.",
+      "Exploring practical applications of machine learning and data analysis.",
     category: "AI",
-    skills: ["Python", "Machine Learning", "Data"],
     members: 2,
     maxMembers: 4,
+    usePositions: true,
 
-    teamMembers: [
+    positions: [
       {
         id: 401,
-        name: "Tan",
-        role: "Machine Learning",
+        positionId: "machine-learning-engineer",
+        name: "Machine Learning Engineer",
+        maxMembers: 1,
       },
       {
         id: 402,
+        positionId: "data-analyst",
+        name: "Data Analyst",
+        maxMembers: 2,
+      },
+      {
+        id: 403,
+        positionId: "other",
+        name: "Researcher",
+        maxMembers: 1,
+      },
+    ],
+
+    teamMembers: [
+      {
+        id: 4001,
+        name: "Tan",
+        positionId: 401,
+        positionName: "Machine Learning Engineer",
+      },
+      {
+        id: 4002,
         name: "Fah",
-        role: "Data Analyst",
+        positionId: 402,
+        positionName: "Data Analyst",
       },
     ],
   },
 
   {
     id: 5,
-    name: "UI/UX Project",
+    name: "Student Experience",
     description:
       "Designing a user-friendly experience for a student platform.",
-    category: "Design",
-    skills: ["Figma", "UI/UX", "Research"],
+    category: "UI/UX",
     members: 3,
     maxMembers: 5,
+    usePositions: true,
 
-    teamMembers: [
+    positions: [
       {
         id: 501,
-        name: "Mint",
-        role: "UX Designer",
+        positionId: "ui-ux-designer",
+        name: "UI/UX Designer",
+        maxMembers: 2,
       },
       {
         id: 502,
-        name: "Fern",
-        role: "UI Designer",
+        positionId: "graphic-designer",
+        name: "Graphic Designer",
+        maxMembers: 1,
       },
       {
         id: 503,
+        positionId: "data-analyst",
+        name: "Data Analyst",
+        maxMembers: 1,
+      },
+      {
+        id: 504,
+        positionId: "other",
+        name: "UX Researcher",
+        maxMembers: 1,
+      },
+    ],
+
+    teamMembers: [
+      {
+        id: 5001,
+        name: "Mint",
+        positionId: 501,
+        positionName: "UI/UX Designer",
+      },
+      {
+        id: 5002,
+        name: "Fern",
+        positionId: 502,
+        positionName: "Graphic Designer",
+      },
+      {
+        id: 5003,
         name: "Ice",
-        role: "UX Researcher",
+        positionId: 504,
+        positionName: "UX Researcher",
       },
     ],
   },
@@ -145,20 +276,24 @@ const teams = [
     description:
       "Building a scalable backend system for a university project.",
     category: "Web",
-    skills: ["Express", "PostgreSQL", "API"],
     members: 2,
     maxMembers: 4,
+    usePositions: false,
+
+    positions: [],
 
     teamMembers: [
       {
-        id: 601,
+        id: 6001,
         name: "Game",
-        role: "Backend Developer",
+        positionId: null,
+        positionName: null,
       },
       {
-        id: 602,
+        id: 6002,
         name: "Boss",
-        role: "Database Developer",
+        positionId: null,
+        positionName: null,
       },
     ],
   },

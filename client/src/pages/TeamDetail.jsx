@@ -37,9 +37,6 @@ function TeamDetail() {
   return (
     <div className="min-h-screen bg-surface">
       <main className="mx-auto max-w-5xl px-6 py-10">
-
-        {/* Back */}
-
         <Link
           to="/teams"
           className="inline-flex items-center gap-2 text-sm font-medium text-text-muted transition hover:text-text"
@@ -62,13 +59,8 @@ function TeamDetail() {
           Back to Teams
         </Link>
 
-
-        {/* Team Header */}
-
         <section className="mt-8 rounded-xl border border-border bg-background p-8">
-
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-
             <div>
               <span className="inline-flex rounded-md bg-primary-light px-2.5 py-1 text-xs font-medium text-primary">
                 {team.category}
@@ -83,9 +75,6 @@ function TeamDetail() {
               </p>
             </div>
 
-
-            {/* Member Count */}
-
             <div className="shrink-0 rounded-lg bg-surface px-5 py-4 text-center">
               <p className="text-2xl font-bold text-text">
                 {team.members}/{team.maxMembers}
@@ -95,42 +84,84 @@ function TeamDetail() {
                 Members
               </p>
             </div>
-
           </div>
-
-
-          {/* Skills */}
-
-          <div className="mt-8 border-t border-border pt-6">
-
-            <h2 className="text-sm font-semibold text-text">
-              Skills Needed
-            </h2>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              {team.skills.map((skill) => (
-                <span
-                  key={skill}
-                  className="rounded-md bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-
-          </div>
-
         </section>
 
+        {team.usePositions &&
+          team.positions.length > 0 && (
+            <section className="mt-6 rounded-xl border border-border bg-background p-6">
+              <div>
+                <h2 className="text-lg font-semibold text-text">
+                  Open Positions
+                </h2>
 
-        {/* Main Content */}
+                <p className="mt-1 text-sm text-text-muted">
+                  Choose a position when requesting to join
+                  this team.
+                </p>
+              </div>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                {team.positions.map((position) => {
+                  const currentMembers =
+                    team.teamMembers.filter(
+                      (member) =>
+                        member.positionId ===
+                        position.id
+                    ).length;
+
+                  const isUnlimited =
+                    position.maxMembers === null;
+
+                  const isFull =
+                    !isUnlimited &&
+                    currentMembers >=
+                      position.maxMembers;
+
+                  return (
+                    <div
+                      key={position.id}
+                      className="rounded-lg border border-border bg-surface p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-sm font-semibold text-text">
+                            {position.name}
+                          </h3>
+
+                          <p className="mt-1 text-xs text-text-muted">
+                            {isUnlimited
+                              ? `${currentMembers} members`
+                              : `${currentMembers} / ${position.maxMembers} members`}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`rounded-md px-2 py-1 text-xs font-medium ${
+                            isFull
+                              ? "bg-surface-hover text-text-muted"
+                              : "bg-primary-light text-primary"
+                          }`}
+                        >
+                          {isFull
+                            ? "Full"
+                            : isUnlimited
+                              ? "Open"
+                              : `${
+                                  position.maxMembers -
+                                  currentMembers
+                                } open`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
         <div className="mt-6 grid gap-6 md:grid-cols-3">
-
-          {/* About */}
-
           <section className="rounded-xl border border-border bg-background p-6 md:col-span-2">
-
             <h2 className="text-lg font-semibold text-text">
               About this team
             </h2>
@@ -139,22 +170,20 @@ function TeamDetail() {
               This team is looking for students who are
               interested in working together on a university
               project. Members can collaborate, share
-              responsibilities, and build the project together.
+              responsibilities, and build the project
+              together.
             </p>
-
           </section>
 
-
-          {/* Join */}
-
           <section className="rounded-xl border border-border bg-background p-6">
-
             <h2 className="text-lg font-semibold text-text">
               Interested?
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-text-muted">
-              Send a request to join this team.
+              {team.usePositions
+                ? "Choose a position and send a request to join this team."
+                : "Send a request to join this team."}
             </p>
 
             <button
@@ -163,65 +192,49 @@ function TeamDetail() {
             >
               Request to Join
             </button>
-
           </section>
-
         </div>
 
-
-        {/* Team Members */}
-
         <section className="mt-6 rounded-xl border border-border bg-background p-6">
+          <div>
+            <h2 className="text-lg font-semibold text-text">
+              Team Members
+            </h2>
 
-          <div className="flex items-center justify-between">
-
-            <div>
-              <h2 className="text-lg font-semibold text-text">
-                Team Members
-              </h2>
-
-              <p className="mt-1 text-sm text-text-muted">
-                {team.members} of {team.maxMembers} members
-              </p>
-            </div>
-
+            <p className="mt-1 text-sm text-text-muted">
+              {team.members} of {team.maxMembers} members
+            </p>
           </div>
 
-
           <div className="mt-6 divide-y divide-border">
-
             {team.teamMembers.map((member) => (
               <div
                 key={member.id}
                 className="flex items-center gap-4 py-4 first:pt-0 last:pb-0"
               >
-
-                {/* Avatar */}
-
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-light text-sm font-semibold text-primary">
                   {member.name.charAt(0)}
                 </div>
-
-
-                {/* Information */}
 
                 <div>
                   <p className="text-sm font-semibold text-text">
                     {member.name}
                   </p>
 
-                  <p className="mt-1 text-sm text-text-muted">
-                    {member.role}
-                  </p>
+                  {member.positionName ? (
+                    <p className="mt-1 text-sm text-text-muted">
+                      {member.positionName}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-text-muted">
+                      Team Member
+                    </p>
+                  )}
                 </div>
-
               </div>
             ))}
-
           </div>
-
         </section>
-
       </main>
     </div>
   );
