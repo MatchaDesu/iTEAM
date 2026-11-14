@@ -4,8 +4,8 @@ const { Pool } = require('pg');
 const db = new Pool({
   user: 'postgres',           // ชื่อผู้ใช้ PostgreSQL (ค่าเริ่มต้นมักเป็น postgres)
   host: 'localhost',          // โฮสต์ที่รันฐานข้อมูล
-  database: 'your_database',  // ชื่อฐานข้อมูลที่คุณสร้างไว้
-  password: 'your_password',  // รหัสผ่าน
+  database: 'iTEAM_Database',  // ชื่อฐานข้อมูลที่คุณสร้างไว้
+  password: '06082547',  // รหัสผ่าน
   port: 5432,                 // พอร์ตเริ่มต้นของ PostgreSQL
 });
 
@@ -15,7 +15,6 @@ db.connect((err, client, release) => {
   }
   console.log('Connected to the PostgreSQL database.');
   
-  // ม่ให้ connection ค้าง
   release(); 
 });
 
