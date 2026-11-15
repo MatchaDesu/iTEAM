@@ -1,46 +1,207 @@
-<div class="card" style="max-width:720px;margin:auto">
-  <div><span class="tag">
-      <%= t.cat %>
-    </span></div>
-  <h1 style="font-size:28px;margin:0">
-    <%= t.name %>
-  </h1>
-  <p>
-    <%= t.desc %>
-  </p>
-  <h3>
-    <%= t.title %>
-  </h3>
-  <div>
-    <% t.roles.forEach(r=> { %><span class="tag">
-        <%= r %>
-      </span>
-      <% }) %>
-  </div>
-  <p class="mu">หัวหน้าทีม: <%= uname(t.leader) %><br>
-      สมาชิก (<%= t.members.length %>/<%= t.max %>): <%= t.members.map(uname).join(', ') %></p>
+<%
+  // ===== 1. Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
+  const isMock = Boolean(locals.db);
+  const t = locals.team || locals.t || {};
+  const tId = t.team_id ?? t.id;
+  const tName = t.team_name ?? t.name ?? 'ไม่ระบุชื่อทีม';
+  const tCat = t.category_name ?? t.cat ?? '';
+  const tDesc = t.description ?? t.desc ?? '';
+  const tMax = Number(t.max_members ?? t.max ?? 5);
+  const tStatus = t.status || 'open';
+  const leaderId = t.created_by ?? t.leader ?? null;
 
-  <% if (!user) { %>
-    <a class="btn" href="/login">เข้าสู่ระบบเพื่อสมัคร</a>
-  <% } else if (isLeader) { %>
-    <span class="mu">คุณเป็นหัวหน้าทีมนี้</span>
-  <% } else if (isMember) { %>
-    <span class="st ok">คุณเป็นสมาชิกทีมนี้แล้ว</span>
-  <% } else if (myApp && myApp.status === ' pending') { %>
-            <form method="post" action="/applications/<%= myApp.id %>/cancel">
-              <span class="st pending">รอพิจารณา</span> <button class="btn no sm">ยกเลิกใบสมัคร</button>
-            </form>
-            <% } else { %>
-              <form method="post" action="/teams/<%= t.id %>/apply">
-                <label for="msg">ข้อความถึงหัวหน้าทีม</label>
-                <textarea id="msg" name="msg" rows="3" placeholder="แนะนำตัวและทักษะที่เกี่ยวข้อง"></textarea>
-                <div style="margin-top:12px"><button class="btn" <%=canApply ? '' : 'disabled'
-                    %>>สมัครเข้าร่วมทีม</button></div>
-              </form>
-              <% if (myApp) { %>
-                <p class="mu">สถานะล่าสุด: <%= ST[myApp.status] %>
-                </p>
-                <% } %>
+  const curUser = locals.user || null;
+  const curUserId = curUser ? (curUser.user_id ?? curUser.id) : null;
+  const isLeader = Boolean(curUserId && leaderId && String(curUserId) === String(leaderId));
+
+  // แปลงรายชื่อสมาชิกให้เป็นรูปแบบเดียวกันทั้งจาก PostgreSQL และ preview.js
+  const mockUsers = Array.isArray(locals.db?.users) ? locals.db.users : [];
+  const rawMembers = Array.isArray(locals.members)
+    ? locals.members
+    : (Array.isArray(t.members) ? t.members : []);
+
+  const memberList = rawMembers.map(m => {
+    if (m && typeof m === 'object') {
+      const fullName = m.first_name
+        ? `${m.first_name} ${m.last_name || ''}`.trim()
+        : (m.name || m.username || 'สมาชิก');
+      return {
+        id: m.user_id ?? m.id,
+        name: fullName,
+        username: m.username || '',
+        skills: m.skills || '',
+        role: m.team_role || (String(m.user_id ?? m.id) === String(leaderId) ? 'leader' : 'member')
+      };
+    }
+    const found = mockUsers.find(u => String(u.id) === String(m));
+    return {
+      id: m,
+      name: found?.name || 'สมาชิก',
+      username: found?.username || '',
+      skills: found?.skills || '',
+      role: String(m) === String(leaderId) ? 'leader' : 'member'
+    };
+  });
+
+  const isMember = Boolean(
+    curUserId && memberList.some(m => String(m.id) === String(curUserId))
+  );
+
+  // ตรวจสอบสถานะการส่งคำขอของผู้ใช้ปัจจุบัน
+  const mockApps = Array.isArray(locals.db?.apps) ? locals.db.apps : [];
+  const myApp = locals.myApplication
+    || (curUserId ? mockApps.find(a => String(a.team) === String(tId) && String(a.user) === String(curUserId)) : null);
+
+  const canApply = Boolean(curUser && !isLeader && !isMember && !myApp && tStatus === 'open' && memberList.length < tMax);
+  const applyAction = locals.applyUrl || (isMock ? `/teams/${tId}/apply` : '/application');
+  const loginUrl = isMock ? '/login' : '/auth/login';
+%>
+
+<div class="pf-wrap">
+  <div>
+    <a class="btn sec sm" href="/teams">← กลับไปหน้าค้นหาทีม</a>
+  </div>
+
+  <!-- 1. การ์ดหัวข้อทีม -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <!-- แบนเนอร์ด้านบน -->
+    <div style="position:relative;background:linear-gradient(180deg,var(--sk) 0%,#eaf2ff 100%);padding:44px 24px;display:grid;place-items:center;border-bottom:1px solid var(--ln)">
+      <div style="position:absolute;top:16px;right:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <% if (tCat) { %>
+          <span class="tag" style="background:var(--sf);margin:0"><%= tCat %></span>
+        <% } %>
+        <span class="st <%= tStatus === 'open' ? 'ok' : 'no' %>">
+          <%= tStatus === 'open' ? 'เปิดรับสมัคร' : 'ปิดรับสมัคร' %>
+        </span>
+      </div>
+
+      <div class="logo" style="font-size:28px;pointer-events:none">
+        <i style="width:34px;height:34px;border-radius:10px"></i>
+        <span>i<em style="font-style:normal;color:var(--ink)">TEAM</em></span>
+      </div>
+    </div>
+
+    <!-- ข้อมูลทีมด้านล่างแบนเนอร์ -->
+    <div style="padding:24px 28px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px">
+        <h1 style="margin:0 0 8px;font-size:clamp(22px,3.5vw,28px)"><%= tName %></h1>
+        <p style="margin:0 0 12px;font-size:15px;color:var(--ink);line-height:1.6">
+          <%= tDesc || 'ไม่มีรายละเอียดทีม' %>
+        </p>
+        <div class="mu" style="font-size:14px">
+          หมวดหมู่: <%= tCat || 'ไม่ระบุ' %> • สมาชิก <%= memberList.length %>/<%= tMax %> คน
+        </div>
+      </div>
+
+      <!-- ปุ่มส่งคำขอ / จัดการทีม และ ติดต่อหัวหน้าทีม -->
+      <div style="display:flex;flex-direction:column;gap:8px;min-width:170px">
+        <% if (isLeader) { %>
+          <a class="btn" style="justify-content:center" href="/leader/teams?team=<%= tId %>">จัดการทีม</a>
+        <% } else if (!isMember) { %>
+          <% if (!curUser) { %>
+            <a class="btn" style="justify-content:center" href="<%= loginUrl %>">ส่งคำขอ</a>
+          <% } else if (myApp) { %>
+            <button type="button" class="btn sec" style="justify-content:center;cursor:default" disabled>ส่งคำขอแล้ว</button>
+          <% } else if (canApply) { %>
+            <a class="btn" style="justify-content:center" href="#applySection" onclick="focusApplyForm(event)">ส่งคำขอ</a>
+          <% } else { %>
+            <button type="button" class="btn sec" style="justify-content:center;cursor:not-allowed" disabled>ปิดรับสมัคร</button>
+          <% } %>
+        <% } %>
+
+        <% if (leaderId) { %>
+          <a class="btn sec" style="justify-content:center" href="/users/<%= leaderId %>">
+            ✉ ติดต่อหัวหน้าทีม
+          </a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. กล่องส่งคำขอเข้าร่วมทีม -->
+  <% if (!isLeader && !isMember) { %>
+    <div id="applySection" class="card">
+      <h2 style="margin:0">ส่งคำขอเข้าร่วมทีม</h2>
+
+      <% if (!curUser) { %>
+        <div class="mu">
+          กรุณา <a href="<%= loginUrl %>">เข้าสู่ระบบ</a> เพื่อส่งคำขอเข้าร่วมทีมนี้
+        </div>
+      <% } else if (myApp) { %>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="mu">คุณได้ส่งคำขอเข้าร่วมทีมนี้แล้ว สถานะปัจจุบัน:</span>
+          <span class="st <%= myApp.status === 'approved' ? 'accepted' : myApp.status %>">
+            <%= myApp.status === 'pending' ? 'รอพิจารณา' : (myApp.status === 'rejected' ? 'ไม่ผ่าน' : 'ได้รับการตอบรับ') %>
+          </span>
+        </div>
+      <% } else if (!canApply) { %>
+        <div class="mu">ทีมนี้ปิดรับสมัครหรือมีสมาชิกครบจำนวนแล้ว</div>
+      <% } else { %>
+        <form method="post" action="<%= applyAction %>">
+          <input type="hidden" name="team_id" value="<%= tId %>">
+          <label for="applyMsg" style="margin-top:0">ข้อความแนะนำตัวถึงหัวหน้าทีม</label>
+          <textarea
+            id="applyMsg"
+            name="message"
+            rows="3"
+            placeholder="แนะนำทักษะ ความถนัด หรือเหตุผลที่อยากเข้าร่วมทีมนี้..."
+            required></textarea>
+          <div style="margin-top:12px">
+            <button type="submit" class="btn">ส่งคำขอ</button>
+          </div>
+        </form>
+      <% } %>
+    </div>
+  <% } %>
+
+  <!-- 3. รายชื่อสมาชิกในทีม -->
+  <div class="card">
+    <h2 style="margin:0">
+      สมาชิกในทีม
+      <span class="mu" style="font-size:15px;font-weight:400">(<%= memberList.length %>/<%= tMax %> คน)</span>
+    </h2>
+
+    <% if (memberList.length) { %>
+      <div class="stack">
+        <% memberList.forEach(m => { %>
+          <div class="pf-team-row">
+            <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--sk);color:var(--bl);font-weight:700;display:grid;place-items:center;flex-shrink:0">
+                <%= (m.name || 'U').charAt(0).toUpperCase() %>
+              </div>
+              <div style="min-width:0">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <a href="/users/<%= m.id %>" class="pf-team-title"><%= m.name %></a>
+                  <% if (m.role === 'leader') { %>
+                    <span class="st ok">หัวหน้าทีม</span>
+                  <% } else { %>
+                    <span class="tag" style="margin:0">สมาชิก</span>
                   <% } %>
-                    <div><a class="btn sec sm" href="/teams">← กลับไปค้นหา</a></div>
+                </div>
+                <% if (m.skills) { %>
+                  <div class="mu pf-team-desc"><%= m.skills %></div>
+                <% } %>
+              </div>
+            </div>
+
+            <a class="btn sec sm" href="/users/<%= m.id %>">ดูโปรไฟล์</a>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="pf-empty-sub mu">ยังไม่มีข้อมูลสมาชิกในทีม</div>
+    <% } %>
+  </div>
 </div>
+
+<script>
+  function focusApplyForm(e) {
+    const section = document.getElementById('applySection');
+    const input = document.getElementById('applyMsg');
+    if (section) {
+      e.preventDefault();
+      section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (input) setTimeout(() => input.focus(), 250);
+    }
+  }
+</script>

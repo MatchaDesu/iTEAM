@@ -1,29 +1,34 @@
+<%
+  const teamId = t.team_id ?? t.id;
+  const teamName = t.team_name ?? t.name ?? '';
+  const teamCat = t.category_name ?? t.cat ?? 'ทั่วไป';
+  const teamDesc = t.description ?? t.desc ?? '';
+  const teamRoles = Array.isArray(t.roles) ? t.roles : [];
+  const memberCount = Array.isArray(t.members) ? t.members.length : (t.member_count ?? null);
+  const teamMax = t.max_members ?? t.max ?? null;
+%>
+
 <div class="card">
   <div style="display:flex;justify-content:space-between;gap:8px">
-    <div><span class="tag">
-        <%= t.cat %>
-      </span>
-      <h3>
-        <%= t.name %>
-      </h3>
+    <div>
+      <span class="tag"><%= teamCat %></span>
+      <h3><%= teamName %></h3>
     </div>
-    <% if (user) { %>
-      <form method="post" action="/favorites/<%= t.id %>"><button class="fav" aria-label="บันทึกทีม">
-          <%= favIds.includes(t.id) ? '♥' : '♡' %>
-        </button></form>
-      <% } %>
   </div>
-  <div class="mu" style="font-size:15px">
-    <%= t.desc %>
-  </div>
-  <div>
-    <% t.roles.forEach(r=> { %><span class="tag">
-        <%= r %>
-      </span>
-      <% }) %>
-  </div>
+  <div class="mu" style="font-size:15px"><%= teamDesc %></div>
+  <% if (teamRoles.length) { %>
+    <div>
+      <% teamRoles.forEach(r => { %><span class="tag"><%= r %></span><% }) %>
+    </div>
+  <% } %>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto">
-    <span class="mu" style="font-size:14px">สมาชิก <%= t.members.length %>/<%= t.max %></span>
-    <a class="btn sm" href="/teams/<%= t.id %>">ดูรายละเอียด</a>
+    <span class="mu" style="font-size:14px">
+      <% if (memberCount !== null) { %>
+        สมาชิก <%= memberCount %><%= teamMax ? '/' + teamMax : '' %> คน
+      <% } else { %>
+        ดูรายละเอียดทีม
+      <% } %>
+    </span>
+    <a class="btn sm" href="/teams/<%= teamId %>">ดูรายละเอียด</a>
   </div>
 </div>

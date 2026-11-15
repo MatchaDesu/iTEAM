@@ -1,0 +1,193 @@
+<%
+  // ===== Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
+  const viewer = locals.user || null;
+  const viewerId = viewer ? (viewer.user_id ?? viewer.id) : null;
+
+  // ข้อมูลเจ้าของโปรไฟล์ที่กำลังเปิดดู (แยกจาก locals.user ซึ่งเป็นคนล็อกอิน)
+  const target = locals.profileUser || locals.targetUser || locals.member || locals.u || {};
+  const targetId = target.user_id ?? target.id ?? null;
+  const isSelf = Boolean(viewerId && targetId && String(viewerId) === String(targetId));
+
+  const fullName = target.first_name
+    ? `${target.first_name} ${target.last_name || ''}`.trim()
+    : (target.name || target.username || 'ผู้ใช้งาน');
+  const initialChar = fullName.charAt(0).toUpperCase();
+
+  // แปลงรายการทักษะเป็น Array
+  const skillList = Array.isArray(target.skills)
+    ? target.skills
+    : (typeof target.skills === 'string' && target.skills.trim()
+        ? target.skills.split(',').map(s => s.trim()).filter(Boolean)
+        : []);
+
+  // แยกกลุ่มทีมที่เป็นหัวหน้าทีม และทีมที่เป็นสมาชิกของเจ้าของโปรไฟล์
+  const mockTeams = Array.isArray(locals.db?.teams) ? locals.db.teams : [];
+  let leaderTeams = [];
+  let memberTeams = [];
+
+  if (Array.isArray(locals.leaderTeams) || Array.isArray(locals.memberTeams)) {
+    leaderTeams = Array.isArray(locals.leaderTeams) ? locals.leaderTeams : [];
+    memberTeams = Array.isArray(locals.memberTeams) ? locals.memberTeams : [];
+  } else if (Array.isArray(locals.teams)) {
+    leaderTeams = locals.teams.filter(t => t.team_role === 'leader');
+    memberTeams = locals.teams.filter(t => t.team_role !== 'leader');
+  } else if (mockTeams.length && targetId !== null) {
+    leaderTeams = mockTeams.filter(t => String(t.leader) === String(targetId));
+    memberTeams = mockTeams.filter(
+      t => Array.isArray(t.members)
+        && t.members.some(m => String(m) === String(targetId))
+        && String(t.leader) !== String(targetId)
+    );
+  }
+%>
+
+<div class="pf-wrap">
+  <div>
+    <a class="btn sec sm" href="javascript:history.back()">← ย้อนกลับ</a>
+  </div>
+
+  <!-- 1. การ์ดข้อมูลโปรไฟล์ -->
+  <div class="card">
+    <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
+      <!-- รูปโปรไฟล์วงกลม -->
+      <div style="width:84px;height:84px;border-radius:50%;background:var(--sk);color:var(--bl);font-size:32px;font-weight:700;display:grid;place-items:center;flex-shrink:0;border:1px solid rgba(37,99,235,.15)">
+        <%= initialChar %>
+      </div>
+
+      <!-- ชื่อ, คำแนะนำตัว และช่องทางติดต่อ -->
+      <div style="flex:1;min-width:240px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div>
+            <h2 style="margin:0"><%= fullName %></h2>
+            <% if (target.username) { %>
+              <div class="mu" style="font-size:14px;margin-top:2px">@<%= target.username %></div>
+            <% } %>
+          </div>
+
+          <% if (isSelf) { %>
+            <a class="btn sec sm" href="/profile/edit">แก้ไขโปรไฟล์</a>
+          <% } %>
+        </div>
+
+        <p style="margin:12px 0;font-size:15px;line-height:1.6;color:var(--ink)">
+          <%= target.bio || 'ยังไม่มีข้อมูลแนะนำตัว' %>
+        </p>
+
+        <!-- ปุ่ม/ข้อมูลติดต่อ -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <% if (target.github) { %>
+            <a class="btn sec sm" href="<%= target.github %>" target="_blank" rel="noopener noreferrer">
+              GitHub
+            </a>
+          <% } %>
+          <% if (target.email) { %>
+            <a class="btn sec sm" href="mailto:<%= target.email %>">
+              ✉ <%= target.email %>
+            </a>
+          <% } %>
+          <% if (target.phone) { %>
+            <span class="tag" style="margin:0;padding:6px 12px">โทร: <%= target.phone %></span>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. การ์ดทักษะ -->
+  <div class="card">
+    <h2 style="margin:0">ทักษะ</h2>
+    <% if (skillList.length) { %>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <% skillList.forEach(skill => { %>
+          <span class="ct-skill-pill" style="padding:5px 14px"><%= skill %></span>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="mu" style="font-size:14px">ยังไม่ได้ระบุทักษะ</div>
+    <% } %>
+  </div>
+
+  <!-- 3. การ์ดทีมที่เข้าร่วม (แยกหัวหน้าทีม / สมาชิก ไม่มีรายการคำขอ) -->
+  <div class="card">
+    <h2 style="margin:0">
+      ทีมที่เข้าร่วม
+      <span class="mu" style="font-size:15px;font-weight:400">(<%= leaderTeams.length + memberTeams.length %> ทีม)</span>
+    </h2>
+
+    <!-- กลุ่มที่ 1: ทีมที่เป็นหัวหน้าทีม -->
+    <div class="pf-team-group">
+      <div class="pf-group-label">
+        <span>ทีมที่เป็นหัวหน้าทีม</span>
+        <span class="pill" style="margin:0;padding:2px 10px;font-size:12px"><%= leaderTeams.length %></span>
+      </div>
+
+      <% if (leaderTeams.length) { %>
+        <div class="stack">
+          <% leaderTeams.forEach(t => {
+            const tId = t.team_id ?? t.id;
+            const tName = t.team_name ?? t.name ?? '';
+            const tCat = t.category_name ?? t.cat ?? '';
+            const tDesc = t.description ?? t.desc ?? '';
+          %>
+            <div class="pf-team-row">
+              <a href="/teams/<%= tId %>" style="min-width:0;flex:1;text-decoration:none;color:inherit">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <span class="pf-team-title"><%= tName %></span>
+                  <% if (tCat) { %><span class="tag" style="margin:0"><%= tCat %></span><% } %>
+                  <span class="st ok">หัวหน้าทีม</span>
+                </div>
+                <% if (tDesc) { %>
+                  <div class="mu pf-team-desc"><%= tDesc %></div>
+                <% } %>
+              </a>
+
+              <div class="acts">
+                <a class="btn sec sm" href="/teams/<%= tId %>">ดูทีม</a>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="pf-empty-sub mu">ยังไม่ได้เป็นหัวหน้าทีมใด</div>
+      <% } %>
+    </div>
+
+    <!-- กลุ่มที่ 2: ทีมที่เป็นสมาชิก -->
+    <div class="pf-team-group" style="margin-top:8px">
+      <div class="pf-group-label">
+        <span>ทีมที่เป็นสมาชิก</span>
+        <span class="pill" style="margin:0;padding:2px 10px;font-size:12px"><%= memberTeams.length %></span>
+      </div>
+
+      <% if (memberTeams.length) { %>
+        <div class="stack">
+          <% memberTeams.forEach(t => {
+            const tId = t.team_id ?? t.id;
+            const tName = t.team_name ?? t.name ?? '';
+            const tCat = t.category_name ?? t.cat ?? '';
+            const tDesc = t.description ?? t.desc ?? '';
+          %>
+            <div class="pf-team-row">
+              <a href="/teams/<%= tId %>" style="min-width:0;flex:1;text-decoration:none;color:inherit">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <span class="pf-team-title"><%= tName %></span>
+                  <% if (tCat) { %><span class="tag" style="margin:0"><%= tCat %></span><% } %>
+                  <span class="tag" style="margin:0">สมาชิก</span>
+                </div>
+                <% if (tDesc) { %>
+                  <div class="mu pf-team-desc"><%= tDesc %></div>
+                <% } %>
+              </a>
+
+              <div class="acts">
+                <a class="btn sec sm" href="/teams/<%= tId %>">ดูทีม</a>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="pf-empty-sub mu">ยังไม่ได้เข้าร่วมทีมในฐานะสมาชิก</div>
+      <% } %>
+    </div>
+  </div>
+</div>

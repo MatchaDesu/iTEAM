@@ -1,11 +1,16 @@
+<%
+  const noteList = locals.list || locals.notifications || [];
+%>
+
 <h2>การแจ้งเตือน</h2>
-<% if (list.length) { %>
+<% if (noteList.length) { %>
   <div class="stack">
-    <% list.forEach(n=> { %><div class="card" style="<%= n.read ? '' : 'border-color:var(--bl)' %>">
-        <%= n.text %>
+    <% noteList.forEach(n => { %>
+      <div class="card" style="<%= n.read ? '' : 'border-color:var(--bl)' %>">
+        <%= n.text || n.message %>
       </div>
-      <% }) %>
+    <% }) %>
   </div>
-  <% } else { %>
-    <div class="empty">ยังไม่มีการแจ้งเตือน</div>
-    <% } %>
+<% } else { %>
+  <div class="empty">ยังไม่มีการแจ้งเตือน</div>
+<% } %>

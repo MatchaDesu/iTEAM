@@ -1,9 +1,35 @@
-<div class="card" style="max-width:420px;margin:40px auto">
+<div class="card" style="max-width:480px;margin:32px auto">
   <h2>สมัครสมาชิก</h2>
-  <form method="post" action="/register">
-    <label for="name">ชื่อ-นามสกุล</label><input id="name" name="name" required>
-    <label for="email">อีเมล</label><input id="email" name="email" type="email" required>
-    <div class="acts" style="margin-top:16px"><button class="btn">สมัครสมาชิก</button><a class="btn sec"
-        href="/login">มีบัญชีแล้ว</a></div>
+  <form method="post" action="/auth/signup">
+    <label for="username">ชื่อผู้ใช้ (Username)</label>
+    <input id="username" name="username" maxlength="30" required placeholder="เช่น somchai_dev">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>
+        <label for="first_name">ชื่อจริง</label>
+        <input id="first_name" name="first_name" maxlength="100" required>
+      </div>
+      <div>
+        <label for="last_name">นามสกุล</label>
+        <input id="last_name" name="last_name" maxlength="100" required>
+      </div>
+    </div>
+
+    <label for="email">อีเมล</label>
+    <input id="email" name="email" type="email" required placeholder="name@email.com">
+
+    <label for="phone">เบอร์โทรศัพท์</label>
+    <input id="phone" name="phone" type="tel" maxlength="15" required placeholder="08XXXXXXXX">
+
+    <label for="github">GitHub (ไม่บังคับ)</label>
+    <input id="github" name="github" placeholder="https://github.com/username">
+
+    <label for="password">รหัสผ่าน (อย่างน้อย 8 ตัวอักษร)</label>
+    <input id="password" name="password" type="password" minlength="8" maxlength="72" required>
+
+    <div class="acts" style="margin-top:18px">
+      <button type="submit" class="btn">สมัครสมาชิก</button>
+      <a class="btn sec" href="/auth/login">มีบัญชีแล้ว</a>
+    </div>
   </form>
 </div>

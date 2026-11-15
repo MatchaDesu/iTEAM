@@ -1,26 +1,276 @@
-<h2>โปรไฟล์ของฉัน</h2>
-<div class="card" style="max-width:560px">
-  <div style="display:flex;gap:16px;align-items:center">
-    <img src="/images/profile_anonymous.svg" alt="" width="72" height="72"
-      style="border-radius:50%;background:var(--sk)" onerror="this.style.display='none'">
-    <div>
-      <h3>
-        <%= user.name %>
-      </h3>
-      <div class="mu">
-        <%= user.email %>
+<%
+  // ===== 1. Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
+  const u = locals.profileUser || locals.user || {};
+  const uId = u.user_id ?? u.id ?? null;
+
+  const curUser = locals.user || null;
+  const curId = curUser ? (curUser.user_id ?? curUser.id) : null;
+  const isOwnProfile = Boolean(curId && uId && String(curId) === String(uId));
+
+  const fullName = u.first_name
+    ? `${u.first_name} ${u.last_name || ''}`.trim()
+    : (u.name || u.username || 'ไม่ระบุชื่อ');
+  const avatarInitial = fullName.charAt(0).toUpperCase() || 'U';
+
+  const rawAvatar = u.profile_image || '';
+  const isDefaultAvatar = !rawAvatar
+    || rawAvatar.includes('profile-anonymous')
+    || rawAvatar.includes('profile_anonymous');
+
+  const skillList = Array.isArray(u.skills)
+    ? u.skills
+    : (typeof u.skills === 'string' && u.skills.trim()
+        ? u.skills.split(',').map(s => s.trim()).filter(Boolean)
+        : []);
+
+  // ===== 2. แยกกลุ่มทีมที่เป็นหัวหน้าทีม และทีมที่เป็นสมาชิก =====
+  let leaderTeams = [];
+  let memberTeams = [];
+
+  if (Array.isArray(locals.teams)) {
+    // กรณีดึงจาก PostgreSQL ผ่าน teamMemberModel.getTeamsByUserId(userId)
+    leaderTeams = locals.teams.filter(t => t.team_role === 'leader');
+    memberTeams = locals.teams.filter(t => t.team_role !== 'leader');
+  } else if (Array.isArray(locals.db?.teams) && uId !== null) {
+    // กรณีข้อมูลจำลองจาก preview.js
+    leaderTeams = locals.db.teams.filter(t => String(t.leader) === String(uId));
+    memberTeams = locals.db.teams.filter(
+      t => Array.isArray(t.members)
+        && t.members.some(m => String(m) === String(uId))
+        && String(t.leader) !== String(uId)
+    );
+  }
+
+  // ===== 3. ดึงรายการใบสมัครของผู้ใช้ (รองรับทั้ง PostgreSQL และ preview.js) =====
+  const mockTeams = Array.isArray(locals.db?.teams) ? locals.db.teams : [];
+  let myApps = [];
+
+  if (Array.isArray(locals.applications)) {
+    myApps = locals.applications;
+  } else if (Array.isArray(locals.apps)) {
+    myApps = locals.apps;
+  } else if (Array.isArray(locals.db?.apps) && uId !== null) {
+    myApps = locals.db.apps.filter(a => String(a.user) === String(uId));
+  }
+
+  const appsUrl = locals.applicationsUrl || (locals.db ? '/applications' : '/application');
+  const cancelBaseUrl = locals.db ? '/applications' : '/application';
+  const statusMap = Object.assign(
+    { pending: 'รอพิจารณา', approved: 'ได้รับการตอบรับ', accepted: 'ได้รับการตอบรับ', rejected: 'ไม่ผ่าน' },
+    locals.ST || {}
+  );
+%>
+
+<div class="pf-wrap">
+  <!-- 1. การ์ดข้อมูลโปรไฟล์หลัก (รวมชื่อ แนะนำตัว ช่องทางติดต่อ และป้ายทักษะไว้ในกล่องเดียว) -->
+  <div class="card pf-hero">
+    <div class="pf-avatar-box">
+      <% if (!isDefaultAvatar) { %>
+        <img
+          class="pf-avatar-img"
+          src="<%= rawAvatar %>"
+          alt="<%= fullName %>"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+        <div class="pf-avatar-initial" style="display:none"><%= avatarInitial %></div>
+      <% } else { %>
+        <div class="pf-avatar-initial"><%= avatarInitial %></div>
+      <% } %>
+    </div>
+
+    <div class="pf-main">
+      <div class="pf-top-row">
+        <div>
+          <h1 class="pf-name"><%= fullName %></h1>
+          <% if (u.username) { %>
+            <div class="mu" style="font-size:14px">@<%= u.username %></div>
+          <% } %>
+        </div>
+
+        <% if (isOwnProfile) { %>
+          <div class="acts">
+            <a class="btn sec sm" href="/leader/teams/new">+ สร้างทีม</a>
+            <a class="btn sm" href="/profile/edit">แก้ไขโปรไฟล์</a>
+          </div>
+        <% } %>
       </div>
+
+      <p class="pf-bio <%= u.bio ? '' : 'mu' %>">
+        <%= u.bio || 'ยังไม่มีข้อความแนะนำตัว' %>
+      </p>
+
+      <div class="pf-meta mu">
+        <% if (u.email) { %><span>✉ <%= u.email %></span><% } %>
+        <% if (u.phone) { %><span>• ☎ <%= u.phone %></span><% } %>
+        <% if (u.github) { %>
+          <span>• GitHub:
+            <a href="<%= u.github.startsWith('http') ? u.github : 'https://github.com/' + u.github %>"
+               target="_blank" rel="noopener"><%= u.github %></a>
+          </span>
+        <% } %>
+      </div>
+
+      <!-- ป้ายทักษะรวมอยู่ในกล่องข้อมูลโปรไฟล์ -->
+      <% if (skillList.length) { %>
+        <div class="pf-tags" style="margin-top:4px">
+          <% skillList.forEach(skill => { %>
+            <span class="tag"><%= skill %></span>
+          <% }) %>
+        </div>
+      <% } %>
     </div>
   </div>
-  <div><b>ทักษะ</b>
-    <div class="mu">
-      <%= user.skills || 'ยังไม่ได้ระบุ' %>
+
+  <!-- 2. กล่องทีมที่เข้าร่วม แยกหัวหน้าทีมกับสมาชิก -->
+  <div class="card">
+    <h2>
+      ทีมของฉัน
+      <span class="mu" style="font-size:15px;font-weight:400">
+        (<%= leaderTeams.length + memberTeams.length %> ทีม)
+      </span>
+    </h2>
+
+    <!-- กลุ่มที่ 1: ทีมที่เป็นหัวหน้าทีม -->
+    <div class="pf-team-group">
+      <div class="pf-group-label">
+        <span>ทีมที่เป็นหัวหน้าทีม</span>
+        <span class="pill" style="margin:0;padding:2px 10px;font-size:12px"><%= leaderTeams.length %></span>
+      </div>
+
+      <% if (leaderTeams.length) { %>
+        <div class="stack">
+          <% leaderTeams.forEach(t => {
+            const tId = t.team_id ?? t.id;
+            const tName = t.team_name ?? t.name ?? '';
+            const tCat = t.category_name ?? t.cat ?? '';
+            const tDesc = t.description ?? t.desc ?? '';
+          %>
+            <div class="pf-team-row">
+              <div style="min-width:0;flex:1">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <a href="/teams/<%= tId %>" class="pf-team-title"><%= tName %></a>
+                  <% if (tCat) { %><span class="tag" style="margin:0"><%= tCat %></span><% } %>
+                  <span class="st ok">หัวหน้าทีม</span>
+                </div>
+                <% if (tDesc) { %>
+                  <div class="mu pf-team-desc"><%= tDesc %></div>
+                <% } %>
+              </div>
+              <div class="acts">
+                <% if (isOwnProfile) { %>
+                  <a class="btn sec sm" href="/leader/teams?team=<%= tId %>">จัดการทีม</a>
+                <% } %>
+                <a class="btn sm" href="/teams/<%= tId %>">ดูทีม</a>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="pf-empty-sub mu">
+          ยังไม่ได้เป็นหัวหน้าทีมใด
+          <% if (isOwnProfile) { %>
+            • <a href="/leader/teams/new">สร้างทีมใหม่</a>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- กลุ่มที่ 2: ทีมที่เป็นสมาชิก -->
+    <div class="pf-team-group" style="margin-top:8px">
+      <div class="pf-group-label">
+        <span>ทีมที่เป็นสมาชิก</span>
+        <span class="pill" style="margin:0;padding:2px 10px;font-size:12px"><%= memberTeams.length %></span>
+      </div>
+
+      <% if (memberTeams.length) { %>
+        <div class="stack">
+          <% memberTeams.forEach(t => {
+            const tId = t.team_id ?? t.id;
+            const tName = t.team_name ?? t.name ?? '';
+            const tCat = t.category_name ?? t.cat ?? '';
+            const tDesc = t.description ?? t.desc ?? '';
+          %>
+            <div class="pf-team-row">
+              <div style="min-width:0;flex:1">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <a href="/teams/<%= tId %>" class="pf-team-title"><%= tName %></a>
+                  <% if (tCat) { %><span class="tag" style="margin:0"><%= tCat %></span><% } %>
+                  <span class="tag" style="margin:0">สมาชิก</span>
+                </div>
+                <% if (tDesc) { %>
+                  <div class="mu pf-team-desc"><%= tDesc %></div>
+                <% } %>
+              </div>
+              <div class="acts">
+                <a class="btn sec sm" href="/teams/<%= tId %>">ดูรายละเอียด</a>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="pf-empty-sub mu">
+          ยังไม่ได้เข้าร่วมทีมในฐานะสมาชิก
+          <% if (isOwnProfile) { %>
+            • <a href="/teams">ค้นหาทีมที่สนใจ</a>
+          <% } %>
+        </div>
+      <% } %>
     </div>
   </div>
-  <div><b>แนะนำตัว</b>
-    <div class="mu">
-      <%= user.bio || 'ยังไม่ได้ระบุ' %>
+
+  <!-- 3. กล่องใบสมัครของฉัน (แสดงรายการใบสมัครทั้งหมดออกมาเลย) -->
+  <% if (isOwnProfile) { %>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <h2 style="margin:0">
+          ใบสมัครของฉัน
+          <span class="mu" style="font-size:15px;font-weight:400">(<%= myApps.length %> รายการ)</span>
+        </h2>
+        <div class="acts">
+          <a class="btn sec sm" href="/teams">ค้นหาทีมเพิ่มเติม</a>
+          <a class="btn sm" href="<%= appsUrl %>">ดูใบสมัครทั้งหมด</a>
+        </div>
+      </div>
+
+      <% if (myApps.length) { %>
+        <div class="stack">
+          <% myApps.forEach(a => {
+            const appId = a.application_id ?? a.id;
+            const tId = a.team_id ?? a.team;
+            const foundTeam = mockTeams.find(x => String(x.team_id ?? x.id) === String(tId));
+            const tName = a.team_name ?? foundTeam?.team_name ?? foundTeam?.name ?? 'ไม่พบชื่อทีม';
+            const tCat = a.category_name ?? foundTeam?.category_name ?? foundTeam?.cat ?? '';
+            const msgText = a.message ?? a.msg ?? '';
+            const badgeClass = a.status === 'approved' ? 'accepted' : a.status;
+          %>
+            <div class="pf-team-row">
+              <div style="min-width:0;flex:1">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <a href="/teams/<%= tId %>" class="pf-team-title"><%= tName %></a>
+                  <% if (tCat) { %><span class="tag" style="margin:0"><%= tCat %></span><% } %>
+                  <span class="st <%= badgeClass %>"><%= statusMap[a.status] || a.status %></span>
+                </div>
+                <div class="mu pf-team-desc">
+                  <%= msgText ? `“${msgText}”` : 'ไม่มีข้อความแนะนำตัว' %>
+                </div>
+              </div>
+
+              <div class="acts">
+                <a class="btn sec sm" href="/teams/<%= tId %>">ดูทีม</a>
+                <% if (a.status === 'pending') { %>
+                  <form method="post" action="<%= cancelBaseUrl %>/<%= appId %>/cancel"
+                        onsubmit="return confirm('ยืนยันการยกเลิกใบสมัครนี้?')">
+                    <button type="submit" class="btn no sm">ยกเลิก</button>
+                  </form>
+                <% } %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="pf-empty-sub mu">
+          ยังไม่มีรายการใบสมัคร • <a href="/teams">ค้นหาทีมที่สนใจเพื่อส่งคำขอเข้าร่วม</a>
+        </div>
+      <% } %>
     </div>
-  </div>
-  <div><a class="btn" href="/profile/edit">แก้ไขโปรไฟล์</a></div>
+  <% } %>
 </div>

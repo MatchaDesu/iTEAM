@@ -1,11 +1,26 @@
-<%# ฟิลด์ฟอร์มทีม ใช้ร่วมกันทั้งสร้างและแก้ไข (ส่ง t={} ตอนสร้างใหม่) %>
-    <label for="name">ชื่อทีม</label><input id="name" name="name" value="<%= t.name || '' %>" required>
-    <label for="cat">หมวดหมู่</label>
-    <select id="cat" name="cat">
-        <% cats.forEach(c=> { %><option <%=c===t.cat?'selected':'' %>><%= c %>
-            </option>
-            <% }) %>
-    </select>
-    <label for="desc">รายละเอียดทีม</label><textarea id="desc" name="desc" rows="3"><%= t.desc || '' %></textarea>
-    <label for="max">จำนวนสมาชิกสูงสุด</label><input id="max" name="max" type="number" min="2"
-        value="<%= t.max || 5 %>">
+<%
+  const rawTeam = locals.t || {};
+  const valName = rawTeam.team_name ?? rawTeam.name ?? '';
+  const valDesc = rawTeam.description ?? rawTeam.desc ?? '';
+  const valCatId = rawTeam.category_id ?? '';
+  const valCatName = rawTeam.category_name ?? rawTeam.cat ?? '';
+  const catList = locals.categories || locals.cats || [];
+%>
+
+<label for="team_name">ชื่อทีม</label>
+<input id="team_name" name="team_name" maxlength="100" value="<%= valName %>" required>
+
+<label for="category_id">หมวดหมู่</label>
+<select id="category_id" name="category_id">
+  <option value="">-- ไม่ระบุหมวดหมู่ --</option>
+  <% catList.forEach(c => {
+    const cId = typeof c === 'object' ? c.category_id : c;
+    const cName = typeof c === 'object' ? c.category_name : c;
+    const isSel = (valCatId && String(cId) === String(valCatId)) || (valCatName && cName === valCatName);
+  %>
+    <option value="<%= cId %>" <%= isSel ? 'selected' : '' %>><%= cName %></option>
+  <% }) %>
+</select>
+
+<label for="description">รายละเอียดทีม</label>
+<textarea id="description" name="description" rows="4" required><%= valDesc %></textarea>

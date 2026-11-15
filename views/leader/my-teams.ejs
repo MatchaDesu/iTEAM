@@ -1,96 +1,253 @@
-<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-  <h2>ทีมของฉัน</h2><a class="btn" href="/leader/teams/new">+ สร้างทีมใหม่</a>
-</div>
-<% if (!t) { %>
-  <div class="empty">คุณยังไม่มีทีม สร้างทีมแรกเพื่อเริ่มเปิดรับสมัคร</div>
-  <% } else { const pend=apps.filter(a=> a.status === 'pending').length;
-    const tabs = [['info','ข้อมูลทีม'],['post','โพสต์รับสมัคร'],['appl','ผู้สมัคร' + (pend ? ` (${pend})` :
-    '')],['mem','สมาชิก']];
+<%
+  // ===== 1. Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
+  const curUser = locals.user || null;
+  const curUserId = curUser ? (curUser.user_id ?? curUser.id) : null;
+
+  const mockTeams = Array.isArray(locals.db?.teams) ? locals.db.teams : [];
+  const mockUsers = Array.isArray(locals.db?.users) ? locals.db.users : [];
+
+  // แยกกลุ่มทีมที่เป็นหัวหน้าทีม และทีมที่เป็นสมาชิก
+  let leaderTeams = [];
+  let memberTeams = [];
+
+  if (Array.isArray(locals.leaderTeams) || Array.isArray(locals.memberTeams)) {
+    // กรณี Controller ส่งแยกมาให้โดยตรง
+    leaderTeams = Array.isArray(locals.leaderTeams) ? locals.leaderTeams : [];
+    memberTeams = Array.isArray(locals.memberTeams) ? locals.memberTeams : [];
+  } else if (Array.isArray(locals.teams)) {
+    // กรณีดึงจาก PostgreSQL ผ่าน teamMemberModel.getTeamsByUserId(userId)
+    leaderTeams = locals.teams.filter(t => t.team_role === 'leader');
+    memberTeams = locals.teams.filter(t => t.team_role !== 'leader');
+  } else if (mockTeams.length && curUserId !== null) {
+    // กรณีข้อมูลจำลองจาก preview.js
+    leaderTeams = mockTeams.filter(t => String(t.leader) === String(curUserId));
+    memberTeams = mockTeams.filter(
+      t => Array.isArray(t.members)
+        && t.members.some(m => String(m) === String(curUserId))
+        && String(t.leader) !== String(curUserId)
+    );
+  } else if (Array.isArray(locals.my)) {
+    leaderTeams = locals.my;
+  }
+
+  const totalTeams = leaderTeams.length + memberTeams.length;
+
+  // ===== 2. ตรวจสอบโหมดจัดการทีมเฉพาะเจาะจง (?team=ID) =====
+  const activeTeam = locals.selectedTeam || locals.t || locals.team || null;
+  const activeTeamId = activeTeam ? (activeTeam.team_id ?? activeTeam.id) : null;
+  const activeTab = ['info', 'appl', 'mem'].includes(locals.tab) ? locals.tab : 'info';
+
+  const appList = locals.applications || locals.apps || [];
+  const pendCount = appList.filter(a => a.status === 'pending').length;
+
+  const rawMembers = Array.isArray(locals.members)
+    ? locals.members
+    : (Array.isArray(activeTeam?.members) ? activeTeam.members : []);
+  const leaderId = activeTeam ? (activeTeam.created_by ?? activeTeam.leader) : null;
+
+  const statusMap = Object.assign(
+    { pending: 'รอพิจารณา', approved: 'ได้รับการตอบรับ', accepted: 'ได้รับการตอบรับ', rejected: 'ไม่ผ่าน' },
+    locals.ST || {}
+  );
+%>
+
+<% if (!activeTeam) { %>
+  <!-- ========================================================= -->
+  <!-- มุมมองหลัก (/leader/teams): การ์ดรวมทีมที่เป็นหัวหน้าและสมาชิก -->
+  <!-- ========================================================= -->
+  <div class="pf-wrap">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <h2 style="margin:0">
+          ทีมของฉัน
+          <span class="mu" style="font-size:15px;font-weight:400">(<%= totalTeams %> ทีม)</span>
+        </h2>
+        <a class="btn sm" href="/leader/teams/new">+ สร้างทีมใหม่</a>
+      </div>
+
+      <!-- กลุ่มที่ 1: ทีมที่เป็นหัวหน้าทีม -->
+      <div class="pf-team-group">
+        <div class="pf-group-label">
+          <span>ทีมที่เป็นหัวหน้าทีม</span>
+          <span class="pill" style="margin:0;padding:2px 10px;font-size:12px"><%= leaderTeams.length %></span>
+        </div>
+
+        <% if (leaderTeams.length) { %>
+          <div class="stack">
+            <% leaderTeams.forEach(t => {
+              const tId = t.team_id ?? t.id;
+              const tName = t.team_name ?? t.name ?? '';
+              const tCat = t.category_name ?? t.cat ?? '';
+              const tDesc = t.description ?? t.desc ?? '';
+            %>
+              <div class="pf-team-row">
+                <a href="/teams/<%= tId %>" style="min-width:0;flex:1;text-decoration:none;color:inherit">
+                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <span class="pf-team-title"><%= tName %></span>
+                    <% if (tCat) { %><span class="tag" style="margin:0"><%= tCat %></span><% } %>
+                    <span class="st ok">หัวหน้าทีม</span>
+                  </div>
+                  <% if (tDesc) { %>
+                    <div class="mu pf-team-desc"><%= tDesc %></div>
+                  <% } %>
+                </a>
+
+                <div class="acts">
+                  <a class="btn sec sm" href="/leader/teams?team=<%= tId %>">จัดการทีม</a>
+                  <a class="btn sm" href="/teams/<%= tId %>">ดูทีม</a>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <div class="pf-empty-sub mu">
+            ยังไม่ได้เป็นหัวหน้าทีมใด • <a href="/leader/teams/new">สร้างทีมใหม่</a>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- กลุ่มที่ 2: ทีมที่เป็นสมาชิก -->
+      <div class="pf-team-group" style="margin-top:8px">
+        <div class="pf-group-label">
+          <span>ทีมที่เป็นสมาชิก</span>
+          <span class="pill" style="margin:0;padding:2px 10px;font-size:12px"><%= memberTeams.length %></span>
+        </div>
+
+        <% if (memberTeams.length) { %>
+          <div class="stack">
+            <% memberTeams.forEach(t => {
+              const tId = t.team_id ?? t.id;
+              const tName = t.team_name ?? t.name ?? '';
+              const tCat = t.category_name ?? t.cat ?? '';
+              const tDesc = t.description ?? t.desc ?? '';
+            %>
+              <div class="pf-team-row">
+                <a href="/teams/<%= tId %>" style="min-width:0;flex:1;text-decoration:none;color:inherit">
+                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <span class="pf-team-title"><%= tName %></span>
+                    <% if (tCat) { %><span class="tag" style="margin:0"><%= tCat %></span><% } %>
+                    <span class="tag" style="margin:0">สมาชิก</span>
+                  </div>
+                  <% if (tDesc) { %>
+                    <div class="mu pf-team-desc"><%= tDesc %></div>
+                  <% } %>
+                </a>
+
+                <div class="acts">
+                  <a class="btn sm" href="/teams/<%= tId %>">ดูทีม</a>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <div class="pf-empty-sub mu">
+            ยังไม่ได้เข้าร่วมทีมในฐานะสมาชิก • <a href="/teams">ค้นหาทีมที่สนใจ</a>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+<% } else { %>
+  <!-- ========================================================= -->
+  <!-- มุมมองจัดการทีม (/leader/teams?team=ID) เมื่อกดปุ่ม "จัดการทีม" -->
+  <!-- ========================================================= -->
+  <div class="pf-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <a class="btn sec sm" href="/leader/teams">← กลับไปรายการทีมของฉัน</a>
+      <a class="btn sec sm" href="/teams/<%= activeTeamId %>">ดูหน้ารายละเอียดทีม</a>
+    </div>
+
+    <h2 style="margin:0">จัดการทีม: <%= activeTeam.team_name ?? activeTeam.name %></h2>
+
+    <%
+      const tabs = [
+        ['info', 'ข้อมูลทีม'],
+        ['appl', 'ผู้สมัคร' + (pendCount ? ` (${pendCount})` : '')],
+        ['mem', 'สมาชิก']
+      ];
     %>
     <div class="tabs">
-      <% my.forEach(x=> { %><a class="chip <%= x.id===t.id?'on':'' %>" href="/leader/teams?team=<%= x.id %>">
-          <%= x.name %>
-        </a>
-        <% }) %>
-    </div>
-    <div class="tabs">
-      <% tabs.forEach(([k,n])=> { %><a class="btn sm <%= tab===k?'':'sec' %>"
-          href="/leader/teams?team=<%= t.id %>&tab=<%= k %>">
+      <% tabs.forEach(([k, n]) => { %>
+        <a class="btn sm <%= activeTab === k ? '' : 'sec' %>" href="/leader/teams?team=<%= activeTeamId %>&tab=<%= k %>">
           <%= n %>
         </a>
-        <% }) %>
+      <% }) %>
     </div>
 
-    <% if (tab==='info' ) { %>
-      <form class="card" style="max-width:560px" method="post" action="/leader/teams/<%= t.id %>">
-        <%- include('../partials/team-fields', {t}) %>
-          <div><button class="btn">บันทึกข้อมูลทีม</button></div>
+    <% if (activeTab === 'info') { %>
+      <form class="card" style="max-width:560px" method="post" action="/leader/teams/<%= activeTeamId %>">
+        <%- include('../partials/team-fields', { t: activeTeam }) %>
+        <div style="margin-top:14px"><button type="submit" class="btn">บันทึกข้อมูลทีม</button></div>
       </form>
 
-      <% } else if (tab==='post' ) { %>
-        <form class="card" style="max-width:560px" method="post" action="/leader/teams/<%= t.id %>/post">
-          <p>สถานะโพสต์:
-            <% if (t.status==='approved' ) { %><span class="st ok">แสดงอยู่</span>
-              <% } else if (t.status==='pending' ) { %><span class="st pending">รอผู้ดูแลตรวจสอบ</span>
-                <% } else { %><span class="st no">ถูกถอดโดยผู้ดูแล<%= t.reason ? ': ' + t.reason : '' %></span>
-                  <% } %>
-          </p>
-          <label for="title">หัวข้อโพสต์</label><input id="title" name="title" value="<%= t.title %>">
-          <label for="roles">ตำแหน่งที่รับ (คั่นด้วยจุลภาค)</label><input id="roles" name="roles"
-            value="<%= t.roles.join(', ') %>">
-          <label><input type="checkbox" name="open" style="width:auto" <%=t.open ? 'checked' : '' %>>
-            เปิดรับสมัคร</label>
-          <div><button class="btn">บันทึกโพสต์</button></div>
-        </form>
-
-        <% } else if (tab==='appl' ) { %>
-          <% if (apps.length) { %>
-            <div class="stack">
-              <% apps.forEach(a=> { const ap = db.users.find(u => u.id === a.user); %>
-                <div class="card row">
-                  <div>
-                    <h3>
-                      <%= ap.name %>
-                    </h3>
-                    <div class="mu" style="font-size:14px">ทักษะ: <%= ap.skills || '-' %><br>“<%= a.msg
-                          || 'ไม่มีข้อความ' %>”</div>
-                  </div>
-                  <div class="acts">
-                    <% if (a.status==='pending' ) { %>
-                      <form method="post" action="/leader/applications/<%= a.id %>/review"><input type="hidden"
-                          name="decision" value="accept"><button class="btn sm">รับเข้าทีม</button></form>
-                      <form method="post" action="/leader/applications/<%= a.id %>/review"><input type="hidden"
-                          name="decision" value="reject"><button class="btn no sm">ปฏิเสธ</button></form>
-                      <% } else { %><span class="st <%= a.status %>">
-                          <%= ST[a.status] %>
-                        </span>
-                        <% } %>
-                  </div>
+    <% } else if (activeTab === 'appl') { %>
+      <% if (appList.length) { %>
+        <div class="stack">
+          <% appList.forEach(a => {
+            const appId = a.application_id ?? a.id;
+            const mockAp = mockUsers.find(u => String(u.id) === String(a.user_id ?? a.user));
+            const apName = a.first_name
+              ? `${a.first_name} ${a.last_name || ''}`.trim()
+              : (mockAp?.name || a.username || 'ผู้สมัคร');
+            const apSub = mockAp?.skills || (a.username ? `@${a.username}` : '');
+            const msgText = a.message ?? a.msg ?? '';
+            const badgeClass = a.status === 'approved' ? 'accepted' : a.status;
+          %>
+            <div class="card row">
+              <div>
+                <h3><%= apName %></h3>
+                <div class="mu" style="font-size:14px">
+                  <% if (apSub) { %>ข้อมูลผู้สมัคร: <%= apSub %><br><% } %>
+                  “<%= msgText || 'ไม่มีข้อความ' %>”
                 </div>
-                <% }) %>
-            </div>
-            <% } else { %>
-              <div class="empty">ยังไม่มีผู้สมัคร</div>
-              <% } %>
-
+              </div>
+              <div class="acts">
+                <% if (a.status === 'pending') { %>
+                  <form method="post" action="/application/<%= appId %>/review">
+                    <input type="hidden" name="status" value="approved">
+                    <button type="submit" class="btn sm">รับเข้าทีม</button>
+                  </form>
+                  <form method="post" action="/application/<%= appId %>/review">
+                    <input type="hidden" name="status" value="rejected">
+                    <button type="submit" class="btn no sm">ปฏิเสธ</button>
+                  </form>
                 <% } else { %>
-                  <div class="stack">
-                    <% t.members.forEach(m=> { %>
-                      <div class="card row">
-                        <div>
-                          <h3>
-                            <%= uname(m) %>
-                          </h3><span class="mu">
-                            <%= m===t.leader ? 'หัวหน้าทีม' : 'สมาชิก' %>
-                          </span>
-                        </div>
-                        <% if (m !==t.leader) { %>
-                          <form method="post" action="/leader/teams/<%= t.id %>/members/<%= m %>/remove"
-                            onsubmit="return confirm('นำสมาชิกคนนี้ออกจากทีม?')"><button
-                              class="btn no sm">นำออกจากทีม</button></form>
-                          <% } %>
-                      </div>
-                      <% }) %>
-                  </div>
-                  <% } %>
-                    <% } %>
+                  <span class="st <%= badgeClass %>"><%= statusMap[a.status] || a.status %></span>
+                <% } %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="empty">ยังไม่มีผู้สมัคร</div>
+      <% } %>
+
+    <% } else { %>
+      <div class="stack">
+        <% rawMembers.forEach(m => {
+          const isObj = m && typeof m === 'object';
+          const mId = isObj ? m.user_id : m;
+          const mockMem = !isObj ? mockUsers.find(u => String(u.id) === String(mId)) : null;
+          const mName = isObj
+            ? (m.first_name ? `${m.first_name} ${m.last_name || ''}`.trim() : m.username)
+            : (mockMem?.name || 'สมาชิก');
+          const isLead = isObj ? (m.team_role === 'leader') : (String(mId) === String(leaderId));
+        %>
+          <div class="card row">
+            <div>
+              <h3><%= mName %></h3>
+              <span class="mu"><%= isLead ? 'หัวหน้าทีม' : 'สมาชิก' %></span>
+            </div>
+            <% if (!isLead) { %>
+              <form method="post" action="/leader/teams/<%= activeTeamId %>/members/<%= mId %>/remove"
+                    onsubmit="return confirm('นำสมาชิกคนนี้ออกจากทีม?')">
+                <button type="submit" class="btn no sm">นำออกจากทีม</button>
+              </form>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+<% } %>

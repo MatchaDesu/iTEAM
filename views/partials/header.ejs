@@ -1,34 +1,173 @@
-<% const links=!user ? [['home','/','หน้าแรก'],['search','/teams','ค้นหาทีม']] : user.role==='admin' ?
-  [['dash','/admin','ภาพรวม'],['users','/admin/users','จัดการผู้ใช้'],['teams','/admin/teams','จัดการทีม'],['cats','/admin/categories','จัดการหมวดหมู่']]
-  :
-  [['home','/','หน้าแรก'],['search','/teams','ค้นหาทีม'],['favs','/favorites','รายการโปรด'],['apps','/applications','ใบสมัครของฉัน'],['manage','/leader/teams','ทีมของฉัน'],['notes','/notifications','แจ้งเตือน'],['profile','/profile','โปรไฟล์']];
-  %>
-  <header>
-    <div class="bar">
-      <a class="logo" href="<%= user && user.role==='admin' ? '/admin' : '/' %>"><i></i>iTEAM</a>
-      <nav>
-        <% links.forEach(([k,href,label])=> { %>
-          <a href="<%= href %>" class="<%= active===k?'on':'' %>">
-            <%= label %>
-              <% if(k==='notes' && unread){ %><span class="dot">
-                  <%= unread %>
-                </span>
-                <% } %>
-                  <% if(k==='teams' && locals.pendingPosts){ %><span class="dot">
-                      <%= pendingPosts %>
-                    </span>
-                    <% } %>
-          </a>
-          <% }) %>
-      </nav>
-      <% if (user) { %>
-        <span class="mu" style="font-size:14px">
-          <%= user.name %>
-        </span>
-        <a class="btn sec sm" href="/logout">ออกจากระบบ</a>
-        <% } else { %>
-          <a class="btn sm" href="/login">เข้าสู่ระบบ</a>
-          <a class="btn sec sm" href="/register">สมัครสมาชิก</a>
+<%
+  // ===== Data Adapter: รองรับทั้ง preview.js และ PostgreSQL (app.js) =====
+  const isMock = Boolean(locals.db);
+  const curUser = locals.user || null;
+
+  const displayName = curUser
+    ? (curUser.first_name
+        ? `${curUser.first_name} ${curUser.last_name || ''}`.trim()
+        : (curUser.name || curUser.username || 'สมาชิก'))
+    : '';
+  const subLabel = curUser
+    ? (curUser.username ? `@${curUser.username}` : (curUser.email || ''))
+    : '';
+  const avatarInitial = displayName ? Array.from(displayName)[0].toUpperCase() : 'U';
+
+  const rawAvatar = curUser?.profile_image || '';
+  const isDefaultAvatar = !rawAvatar
+    || rawAvatar.includes('profile-anonymous')
+    || rawAvatar.includes('profile_anonymous');
+
+  const activeTab = locals.active || '';
+  const unreadCount = Number(locals.unread || 0);
+  const pendingCount = Number(locals.pendingPosts || 0);
+
+  // เส้นทางที่รองรับทั้งโหมดพรีวิวและเซิร์ฟเวอร์หลัก
+  const loginUrl = isMock ? '/login' : '/auth/login';
+  const signupUrl = isMock ? '/register' : '/auth/signup';
+  const appsUrl = isMock ? '/applications' : '/application';
+
+  // ลิงก์เมนูหลักฝั่งซ้าย (วางต่อจากโลโก้ตามภาพตัวอย่าง)
+  const mainLinks = curUser && curUser.role === 'admin'
+    ? [
+        ['dash', '/admin', 'ภาพรวม'],
+        ['users', '/admin/users', 'จัดการผู้ใช้'],
+        ['teams', '/admin/teams', 'จัดการทีม'],
+        ['cats', '/admin/categories', 'จัดการหมวดหมู่']
+      ]
+    : [
+        ['home', '/', 'หน้าแรก'],
+        ['search', '/teams', 'ค้นหาทีม'],
+        ['about', '/about', 'เกี่ยวกับเรา'],
+        ['guide', '/guide', 'คู่มือการใช้งาน']
+      ];
+%>
+
+<header>
+  <div class="bar">
+    <!-- โลโก้ -->
+    <a class="logo" href="<%= curUser && curUser.role === 'admin' ? '/admin' : '/' %>">
+      <i></i><span>i<em>TEAM</em></span>
+    </a>
+
+    <!-- เมนูหลักฝั่งซ้าย -->
+    <nav class="nav-main" aria-label="เมนูหลัก">
+      <% mainLinks.forEach(([k, href, label]) => { %>
+        <a href="<%= href %>" class="<%= activeTab === k ? 'on' : '' %>">
+          <%= label %>
+          <% if (k === 'teams' && pendingCount > 0) { %>
+            <span class="dot"><%= pendingCount %></span>
           <% } %>
+        </a>
+      <% }) %>
+    </nav>
+
+    <!-- กลุ่มไอคอนและโปรไฟล์ฝั่งขวา -->
+    <div class="nav-right">
+      
+
+      <% if (curUser) { %>
+        <% if (curUser.role !== 'admin') { %>
+          <!-- ไอคอนแจ้งเตือน -->
+          <a href="/notifications" class="nav-icon-btn <%= activeTab === 'notes' ? 'on' : '' %>" title="การแจ้งเตือน" aria-label="การแจ้งเตือน">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <% if (unreadCount > 0) { %>
+              <span class="nav-badge"><%= unreadCount > 9 ? '9+' : unreadCount %></span>
+            <% } %>
+          </a>
+        <% } %>
+
+        <!-- ปุ่มโปรไฟล์วงกลม + เมนูดรอปดาวน์ -->
+        <div class="nav-user" id="navUserWrap">
+          <button
+            type="button"
+            class="nav-avatar"
+            onclick="toggleNavMenu(event)"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-label="เมนูบัญชีผู้ใช้"
+            title="<%= displayName %>">
+            <% if (!isDefaultAvatar) { %>
+              <img src="<%= rawAvatar %>" alt="<%= displayName %>" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+              <span style="display:none"><%= avatarInitial %></span>
+            <% } else { %>
+              <span><%= avatarInitial %></span>
+            <% } %>
+          </button>
+
+          <div class="nav-menu" id="navUserMenu" hidden>
+            <div class="nav-menu-head">
+              <div style="font-weight:600;color:var(--ink)"><%= displayName %></div>
+              <% if (subLabel) { %>
+                <div class="mu" style="font-size:13px"><%= subLabel %></div>
+              <% } %>
+            </div>
+
+            <% if (curUser.role === 'admin') { %>
+              <a href="/admin">แดชบอร์ดผู้ดูแล</a>
+              <a href="/admin/users">จัดการผู้ใช้</a>
+              <a href="/admin/teams">จัดการทีม</a>
+              <a href="/admin/categories">จัดการหมวดหมู่</a>
+            <% } else { %>
+              <a href="/profile">โปรไฟล์ของฉัน</a>
+              <a href="/leader/teams">ทีมของฉัน</a>
+              <a href="<%= appsUrl %>">ใบสมัครของฉัน</a>
+              <a href="/leader/teams/new">+ สร้างทีมใหม่</a>
+            <% } %>
+
+            <div class="nav-menu-sep"></div>
+
+            <% if (isMock) { %>
+              <a href="/logout" class="danger">ออกจากระบบ</a>
+            <% } else { %>
+              <form method="post" action="/auth/logout">
+                <button type="submit" class="danger">ออกจากระบบ</button>
+              </form>
+            <% } %>
+          </div>
+        </div>
+
+      <% } else { %>
+        <!-- กรณีผู้เยี่ยมชม (Guest) -->
+        <a class="btn sec sm" href="<%= loginUrl %>">เข้าสู่ระบบ</a>
+        <a class="btn sm" href="<%= signupUrl %>">สมัครสมาชิก</a>
+      <% } %>
     </div>
-  </header>
+  </div>
+</header>
+
+<script>
+  function toggleNavMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('navUserMenu');
+    const btn = e.currentTarget;
+    if (!menu) return;
+    const isHidden = menu.hasAttribute('hidden');
+    if (isHidden) {
+      menu.removeAttribute('hidden');
+      btn.setAttribute('aria-expanded', 'true');
+    } else {
+      menu.setAttribute('hidden', '');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('navUserWrap');
+    const menu = document.getElementById('navUserMenu');
+    if (wrap && menu && !wrap.contains(e.target)) {
+      menu.setAttribute('hidden', '');
+      wrap.querySelector('.nav-avatar')?.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const menu = document.getElementById('navUserMenu');
+      if (menu) menu.setAttribute('hidden', '');
+    }
+  });
+</script>

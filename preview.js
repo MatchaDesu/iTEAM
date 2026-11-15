@@ -1,3 +1,6 @@
+// preview.js — เซิร์ฟเวอร์สำหรับ "ดูหน้าตา" views ด้วยข้อมูลจำลอง (ไม่ต่อฐานข้อมูล)
+// รัน: node preview.js  แล้วเปิด http://localhost:3000
+// สลับบทบาท: /?role=guest | /?role=user | /?role=admin
 const express = require('express');
 const expressEjsLayouts = require('express-ejs-layouts');
 const path = require('path');
@@ -8,153 +11,165 @@ const PORT = 3000;
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// เชื่อมไฟล์ CSS (/style.css) ไม่ว่าจะวางใน public หรือโฟลเดอร์หลัก
+// เสิร์ฟเฉพาะ public เท่านั้น (ห้ามเสิร์ฟทั้งโฟลเดอร์ เพราะจะเปิดโค้ด/config ให้ดาวน์โหลดได้)
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(__dirname));
-
+app.use(express.urlencoded({ extended: true })); // อ่านค่าจากฟอร์ม (req.body)
 app.use(expressEjsLayouts);
 app.set('layout', 'layouts/main');
 
-// เก็บสถานะบทบาทปัจจุบันสำหรับพรีวิว ('guest' | 'user' | 'admin')
+// ---------- ข้อมูลจำลอง (โครงสร้างตรงกับที่ views ใช้) ----------
+const users = [
+  { id: 1, name: 'สมชาย ใจดี', email: 'somchai@example.com', role: 'member', skills: 'JavaScript, Node.js, EJS, CSS', bio: 'นักพัฒนาเว็บ Full-stack ชอบทำโปรเจกต์ Hackathon', suspended: false },
+  { id: 2, name: 'แอดมิน ระบบ', email: 'admin@example.com', role: 'admin', skills: 'Management', bio: 'ผู้ดูแลระบบ iTEAM', suspended: false },
+  { id: 3, name: 'มาลี รักเรียน', email: 'malee@example.com', role: 'member', skills: 'UI Design, Figma', bio: '', suspended: false },
+  { id: 4, name: 'ปิติ ใจเย็น', email: 'piti@example.com', role: 'member', skills: '', bio: '', suspended: true }
+];
+const cats = ['Hackathon', 'โปรเจกต์มหาวิทยาลัย', 'กิจกรรมการแข่งขัน', 'โปรเจกต์ส่วนตัว'];
+const teams = [
+  { id: 1, name: 'ทีมพัฒนาแพลตฟอร์ม iTEAM', cat: 'โปรเจกต์มหาวิทยาลัย', desc: 'สร้างเว็บจับคู่คนกับทีม', max: 5, leader: 1, members: [1, 3], roles: ['Frontend', 'Backend'], title: 'รับ Frontend / UI Designer', open: true, status: 'approved', reason: '', hidden: false },
+  { id: 2, name: 'Hackathon Rocket', cat: 'Hackathon', desc: 'แข่ง Hackathon ปลายปี', max: 4, leader: 1, members: [1], roles: ['AI/ML'], title: 'หา AI Engineer 1 ตำแหน่ง', open: true, status: 'pending', reason: '', hidden: false },
+  { id: 3, name: 'Design Squad', cat: 'โปรเจกต์ส่วนตัว', desc: 'ทีมออกแบบ UX', max: 3, leader: 3, members: [3], roles: ['UX Researcher'], title: 'โพสต์ถูกถอด', open: false, status: 'removed', reason: 'ข้อมูลไม่ครบ', hidden: false }
+];
+const apps = [
+  { id: 1, user: 3, team: 2, msg: 'สนใจเป็น Designer ค่ะ', status: 'pending' },
+  { id: 2, user: 1, team: 3, msg: '', status: 'rejected' },
+  { id: 3, user: 4, team: 1, msg: 'อยากร่วมทีม', status: 'accepted' }
+];
+const notes = [
+  { id: 1, text: 'มีผู้สมัครใหม่ในทีม Hackathon Rocket', read: false },
+  { id: 2, text: 'ใบสมัครของคุณถูกปฏิเสธ', read: true }
+];
+
+// ---------- ตัวช่วยที่ views เรียกใช้ ----------
+const ST = { pending: 'รอพิจารณา', accepted: 'ได้รับการตอบรับ', rejected: 'ไม่ผ่าน' };
+const uname = id => (users.find(u => u.id === id) || { name: '(ไม่พบผู้ใช้)' }).name;
+const db = { users, teams, apps };
+
 let currentRole = 'user';
 
 app.use((req, res, next) => {
-  // สลับบทบาทได้ทันทีผ่าน URL เช่น http://localhost:3000/?role=admin
-  if (req.query.role && ['guest', 'user', 'admin'].includes(req.query.role)) {
-    currentRole = req.query.role;
-  }
+  if (['guest', 'user', 'admin'].includes(req.query.role)) currentRole = req.query.role;
+  const user = currentRole === 'guest' ? null : currentRole === 'admin' ? users[1] : users[0];
 
-  const mockUsers = [
-    {
-      id: 1,
-      name: 'สมชาย ใจดี',
-      email: 'somchai@example.com',
-      role: 'user',
-      bio: 'นักพัฒนาเว็บ Full-stack ชอบทำโปรเจกต์ Hackathon',
-      skills: ['JavaScript', 'Node.js', 'EJS', 'CSS'],
-      suspended: false
-    },
-    {
-      id: 2,
-      name: 'แอดมิน ระบบ',
-      email: 'admin@example.com',
-      role: 'admin',
-      bio: 'ผู้ดูแลระบบ iTEAM',
-      skills: ['Management'],
-      suspended: false
-    }
-  ];
-
-  const activeUser =
-    currentRole === 'guest' ? null :
-    currentRole === 'admin' ? mockUsers[1] : mockUsers[0];
-
-  const mockCats = ['Web Development', 'Mobile App', 'AI & Data', 'Design'];
-  const mockTeams = [
-    {
-      id: 1,
-      name: 'ทีมพัฒนาแพลตฟอร์ม iTEAM',
-      cat: 'Web Development',
-      description: 'รายละเอียดทีมตัวอย่างสำหรับทดสอบการแสดงผลหน้าเว็บ',
-      status: 'open',
-      maxMembers: 5,
-      leaderId: 1,
-      leader: mockUsers[0],
-      members: mockUsers,
-      roles: ['Frontend Developer', 'Backend Developer']
-    }
-  ];
-  const mockPosts = [
-    {
-      id: 1,
-      title: 'เปิดรับสมัคร Frontend / UI Designer ร่วมแข่ง Hackathon',
-      teamId: 1,
-      team: mockTeams[0],
-      positions: ['Frontend', 'Designer'],
-      status: 'pending',
-      createdAt: '2026-11-15'
-    }
-  ];
-
-  res.locals.currentUser = activeUser;
-  res.locals.user = activeUser;
-  res.locals.profile = mockUsers[0];
-  res.locals.users = mockUsers;
-
-  res.locals.cats = mockCats;
-  res.locals.categories = mockCats;
-  res.locals.teams = mockTeams;
-  res.locals.team = mockTeams[0];
-  res.locals.myTeams = mockTeams;
-  res.locals.favorites = mockTeams;
-  res.locals.favIds = [1];
-  res.locals.posts = mockPosts;
-  res.locals.applications = [];
-  res.locals.notifications = [];
-
-  res.locals.db = {
-    users: mockUsers,
-    teams: mockTeams,
-    categories: mockCats,
-    posts: mockPosts,
-    applications: [],
-    notifications: []
-  };
-
-  // ตัวแปรสำหรับ header.ejs และ footer.ejs
-  res.locals.active = 'home';
-  res.locals.unread = 2;
-  res.locals.pendingPosts = 1;
-  res.locals.title = 'iTEAM';
-  res.locals.flash = null;
-  res.locals.error = null;
-  res.locals.success = null;
-  res.locals.q = '';
-  res.locals.cat = '';
-
+  Object.assign(res.locals, {
+    user, db, cats, ST, uname,
+    active: 'home',
+    unread: notes.filter(n => !n.read).length,
+    pendingPosts: teams.filter(t => t.status === 'pending').length,
+    flash: null,
+    q: '', cat: ''
+  });
   next();
 });
 
-// ==========================================
-// ลิงก์ตรงตามเมนูใน header.ejs และทุกหน้าใน views/
-// ==========================================
+const visible = teams.filter(t => t.status === 'approved' && !t.hidden);
 
-// 1. หน้าทั่วไป
+// ---------- หน้าทั่วไป ----------
 app.get('/', (req, res) => res.render('pages/home', { active: 'home' }));
 app.get('/guide', (req, res) => res.render('pages/guide', { active: 'guide' }));
 app.get('/about', (req, res) => res.render('pages/about', { active: 'about' }));
 
-// 2. ระบบสมาชิก (กดออกจากระบบจะสลับเป็นโหมด guest ทันที)
-app.get('/login', (req, res) => res.render('auth/signIn', { layout: 'layouts/auth' }));
-app.get('/signin', (req, res) => res.render('auth/signIn', { layout: 'layouts/auth' }));
-app.get('/register', (req, res) => res.render('auth/signUp', { layout: 'layouts/auth' }));
-app.get('/signup', (req, res) => res.render('auth/signUp', { layout: 'layouts/auth' }));
-app.get('/logout', (req, res) => {
-  currentRole = 'guest';
-  res.redirect('/');
+// ---------- สมาชิก ----------
+['/login', '/signin'].forEach(p => app.get(p, (req, res) => res.render('auth/signIn', { layout: 'layouts/auth' })));
+['/register', '/signup'].forEach(p => app.get(p, (req, res) => res.render('auth/signUp', { layout: 'layouts/auth' })));
+app.get('/logout', (req, res) => { currentRole = 'guest'; res.redirect('/'); });
+
+app.get('/teams', (req, res) => {
+  const q = (req.query.q || '').toLowerCase();
+  const cat = req.query.cat || '';
+  const list = visible.filter(t =>
+    (!cat || t.cat === cat) &&
+    (!q || (t.name + t.desc + t.roles.join(' ')).toLowerCase().includes(q)));
+  res.render('teams/explore', { active: 'search', teams: list, q: req.query.q || '', cat });
 });
 
-// 3. เมนูฝั่งสมาชิกทั่วไป (ตรงตาม href และ key ใน header.ejs)
-app.get('/teams', (req, res) => res.render('teams/explore', { active: 'search' }));
-app.get('/teams/detail', (req, res) => res.render('teams/detail', { active: 'search' }));
-app.get('/favorites', (req, res) => res.render('teams/favorites', { active: 'favs' }));
-app.get('/applications', (req, res) => res.render('teams/applications', { active: 'apps' }));
-app.get('/notifications', (req, res) => res.render('teams/notifications', { active: 'notes' }));
+app.get('/teams/:id', (req, res) => {
+  const t = teams.find(x => x.id === +req.params.id);
+  if (!t) return res.status(404).send('ไม่พบทีม');
+  const u = res.locals.user;
+  const myApp = u ? apps.find(a => a.user === u.id && a.team === t.id) : null;
+  res.render('teams/detail', {
+    active: 'search', t,
+    isLeader: !!u && t.leader === u.id,
+    isMember: !!u && t.members.includes(u.id),
+    myApp,
+    canApply: t.open && t.members.length < t.max
+  });
+});
+
+app.get('/applications', (req, res) => {
+  const u = res.locals.user;
+  res.render('teams/applications', { active: 'apps', apps: u ? apps.filter(a => a.user === u.id) : [] });
+});
+app.get('/notifications', (req, res) => res.render('teams/notifications', { active: 'notes', list: notes }));
 app.get('/profile', (req, res) => res.render('users/profile', { active: 'profile' }));
 app.get('/profile/edit', (req, res) => res.render('users/edit', { active: 'profile' }));
 
-// 4. เมนูฝั่งหัวหน้าทีม
-app.get('/leader/teams', (req, res) => res.render('leader/my-teams', { active: 'manage' }));
-app.get('/leader/teams/new', (req, res) => res.render('leader/create-team', { active: 'manage' }));
-app.get('/leader/create-team', (req, res) => res.render('leader/create-team', { active: 'manage' }));
-
-// 5. เมนูฝั่งแอดมิน (ตรงตาม href และ key ใน header.ejs)
-app.get('/admin', (req, res) => res.render('admin/dashboard', { active: 'dash' }));
-app.get('/admin/users', (req, res) => res.render('admin/users', { active: 'users' }));
-app.get('/admin/teams', (req, res) => res.render('admin/teams', { active: 'teams' }));
-app.get('/admin/categories', (req, res) => res.render('admin/categories', { active: 'cats' }));
-app.get('/admin/posts', (req, res) => res.render('admin/posts', { active: 'teams' }));
-
-app.listen(PORT, () => {
-  console.log(`เปิดดูหน้าเว็บได้เลยที่: http://localhost:${PORT}`);
+// ---------- ดูโปรไฟล์ผู้อื่น ----------
+app.get('/users/:id', (req, res) => {
+  const profileUser = users.find(u => u.id === +req.params.id);
+  if (!profileUser) return res.status(404).send('ไม่พบผู้ใช้งาน');
+  res.render('users/detail_profile', {
+    active: '',
+    profileUser
+  });
 });
+
+
+// ---------- หัวหน้าทีม ----------
+app.get('/leader/teams', (req, res) => {
+  const u = res.locals.user;
+  const my = u ? teams.filter(t => t.leader === u.id) : [];
+  const t = my.find(x => x.id === +req.query.team) || null;
+  res.render('leader/my-teams', {
+    active: 'manage', my, t,
+    tab: ['info', 'post', 'appl', 'mem'].includes(req.query.tab) ? req.query.tab : 'info',
+    apps: t ? apps.filter(a => a.team === t.id) : []
+  });
+});
+
+['/leader/teams/new', '/leader/create-team'].forEach(p =>
+  app.get(p, (req, res) => res.render('leader/create-team', { active: 'manage' })));
+
+// ---------- แอดมิน ----------
+app.get('/admin', (req, res) =>
+  res.render('admin/dashboard', { active: 'dash', pending: teams.filter(t => t.status === 'pending') }));
+
+app.get('/admin/users', (req, res) => {
+  const q = (req.query.q || '').toLowerCase();
+  const f = req.query.f || '';
+  const list = users.filter(u =>
+    (!q || (u.name + u.email).toLowerCase().includes(q)) &&
+    (f === '' || (f === 's') === u.suspended));
+  res.render('admin/users', { active: 'users', users: list, q: req.query.q || '', f });
+});
+
+app.get('/admin/teams', (req, res) => {
+  const q = (req.query.q || '').toLowerCase();
+  const cat = req.query.cat || '';
+  const st = req.query.status || '';
+  const list = teams.filter(t =>
+    (!st || t.status === st) && (!cat || t.cat === cat) &&
+    (!q || (t.name + uname(t.leader)).toLowerCase().includes(q)));
+  res.render('admin/teams', { active: 'teams', teams: list, q: req.query.q || '', cat, st });
+});
+
+app.get('/admin/categories', (req, res) => res.render('admin/categories', { active: 'cats' }));
+app.get('/admin/posts', (req, res) => res.redirect('/admin/teams'));
+
+// จำลองล็อกอิน: ไม่ตรวจรหัสผ่านจริง แค่สลับบทบาทเพื่อดูหน้าเว็บ
+// ใส่อีเมลที่มีคำว่า admin → เข้าเป็นแอดมิน นอกนั้นเป็นสมาชิก
+app.post('/login', (req, res) => {
+  currentRole = String(req.body.email || '').toLowerCase().includes('admin') ? 'admin' : 'user';
+  res.redirect(currentRole === 'admin' ? '/admin' : '/');
+});
+app.post('/register', (req, res) => { currentRole = 'user'; res.redirect('/'); });
+
+// ฟอร์ม POST ในโหมดพรีวิวไม่ทำอะไร แค่เด้งกลับหน้าเดิม
+// (ไม่ใช้ app.post('*') เพราะ Express 5 ไม่รองรับเครื่องหมาย * เดี่ยวๆ)
+app.use((req, res, next) => {
+  if (req.method === 'POST') return res.redirect(req.get('referer') || '/');
+  next();
+});
+
+app.listen(PORT, () => console.log(`เปิดดูหน้าเว็บได้เลยที่: http://localhost:${PORT}`));

@@ -1,25 +1,40 @@
+<%
+  const queryText = locals.q || '';
+  const selectedCat = locals.cat || '';
+  const catList = locals.categories || locals.cats || [];
+  const teamList = Array.isArray(locals.teams) ? locals.teams : [];
+%>
+
 <section class="hero">
   <h1>หาทีมที่ใช่ แล้วลงมือทำด้วยกัน</h1>
   <div class="mu">ค้นหาทีมที่กำลังเปิดรับสมัคร หรือสร้างทีมของคุณเอง</div>
   <form class="search" method="get" action="/teams">
-    <input name="q" value="<%= q %>" placeholder="ค้นหาชื่อทีม ตำแหน่ง หรือทักษะ" aria-label="ค้นหา">
-    <% if (cat) { %><input type="hidden" name="cat" value="<%= cat %>">
-      <% } %>
-        <button class="btn">ค้นหา</button>
+    <input name="q" value="<%= queryText %>" placeholder="ค้นหาชื่อทีม ตำแหน่ง หรือทักษะ" aria-label="ค้นหา">
+    <% if (selectedCat) { %><input type="hidden" name="cat" value="<%= selectedCat %>"><% } %>
+    <button type="submit" class="btn">ค้นหา</button>
   </form>
 </section>
+
 <div class="chips">
-  <a class="chip <%= !cat?'on':'' %>" href="/teams?q=<%= encodeURIComponent(q) %>">ทั้งหมด</a>
-  <% cats.forEach(c=> { %><a class="chip <%= cat===c?'on':'' %>"
-      href="/teams?cat=<%= encodeURIComponent(c) %>&q=<%= encodeURIComponent(q) %>">
-      <%= c %>
+  <a class="chip <%= !selectedCat ? 'on' : '' %>" href="/teams?q=<%= encodeURIComponent(queryText) %>">ทั้งหมด</a>
+  <% catList.forEach(c => {
+    const cVal = typeof c === 'object' ? c.category_id : c;
+    const cName = typeof c === 'object' ? c.category_name : c;
+    const isActive = String(selectedCat) === String(cVal) || String(selectedCat) === String(cName);
+  %>
+    <a class="chip <%= isActive ? 'on' : '' %>"
+       href="/teams?cat=<%= encodeURIComponent(cVal) %>&q=<%= encodeURIComponent(queryText) %>">
+      <%= cName %>
     </a>
-    <% }) %>
+  <% }) %>
 </div>
+
 <div class="grid">
-  <% teams.forEach(t=> { %><%- include('../partials/team-card', {t}) %>
-      <% }) %>
+  <% teamList.forEach(t => { %>
+    <%- include('../partials/team-card', { t }) %>
+  <% }) %>
 </div>
-<% if (!teams.length) { %>
+
+<% if (!teamList.length) { %>
   <div class="empty">ไม่พบทีมที่ตรงกับการค้นหา ลองเปลี่ยนคำค้นหรือหมวดหมู่</div>
-  <% } %>
+<% } %>

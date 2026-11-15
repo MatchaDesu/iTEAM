@@ -1,7 +1,144 @@
+<%
+  // ===== Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
+  const u = locals.user || {};
+
+  // กรณีรันใน preview.js ที่เก็บชื่อรวมใน u.name ให้แยกชื่อจริง-นามสกุลให้อัตโนมัติ
+  let valFirst = u.first_name || '';
+  let valLast = u.last_name || '';
+  if (!valFirst && u.name) {
+    const parts = u.name.trim().split(/\s+/);
+    valFirst = parts[0] || '';
+    valLast = parts.slice(1).join(' ');
+  }
+
+  // แปลงทักษะเดิมเป็น Array เพื่อแสดงเป็นป้ายแท็กทันทีที่เปิดหน้าแก้ไข
+  const initialSkills = Array.isArray(u.skills)
+    ? u.skills
+    : (typeof u.skills === 'string' && u.skills.trim()
+        ? u.skills.split(',').map(s => s.trim()).filter(Boolean)
+        : []);
+%>
+
 <h2>แก้ไขโปรไฟล์</h2>
-<form class="card" style="max-width:560px" method="post" action="/profile">
-  <label for="name">ชื่อ</label><input id="name" name="name" value="<%= user.name %>">
-  <label for="skills">ทักษะ</label><input id="skills" name="skills" value="<%= user.skills %>">
-  <label for="bio">แนะนำตัว</label><textarea id="bio" name="bio" rows="4"><%= user.bio %></textarea>
-  <div class="acts"><button class="btn">บันทึกโปรไฟล์</button><a class="btn sec" href="/profile">ยกเลิก</a></div>
+<form id="editProfileForm" class="card" style="max-width:560px" method="post" action="/profile">
+  <label for="username">ชื่อผู้ใช้ (Username)</label>
+  <input id="username" name="username" maxlength="30" value="<%= u.username || '' %>" required>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div>
+      <label for="first_name">ชื่อจริง</label>
+      <input id="first_name" name="first_name" maxlength="100" value="<%= valFirst %>" required>
+    </div>
+    <div>
+      <label for="last_name">นามสกุล</label>
+      <input id="last_name" name="last_name" maxlength="100" value="<%= valLast %>" required>
+    </div>
+  </div>
+
+  <label for="email">อีเมล</label>
+  <input id="email" name="email" type="email" value="<%= u.email || '' %>" required>
+
+  <label for="phone">เบอร์โทรศัพท์</label>
+  <input id="phone" name="phone" type="tel" maxlength="15" value="<%= u.phone || '' %>" required>
+
+  <label for="github">GitHub</label>
+  <input id="github" name="github" value="<%= u.github || '' %>" placeholder="https://github.com/username">
+
+  <!-- ส่วนเพิ่ม/ลบทักษะแบบป้ายแท็กเหมือนหน้าสร้างทีม -->
+  <div>
+    <label for="skillInput">ทักษะ</label>
+    <div class="mu" style="font-size:13px;margin-bottom:6px">
+      พิมพ์ทักษะของคุณ แล้วกดปุ่ม <b>เพิ่ม</b> หรือกด <b>Enter</b>
+    </div>
+
+    <div id="skillTags" class="ct-tags" aria-live="polite"></div>
+
+    <div class="ct-inline-add">
+      <input
+        id="skillInput"
+        type="text"
+        maxlength="40"
+        placeholder="เช่น Figma, Frontend, Node.js, UX/UI">
+      <button type="button" id="addSkillBtn" class="btn sec">+ เพิ่ม</button>
+    </div>
+
+    <!-- เก็บค่าทักษะรวมคั่นด้วยจุลภาคส่งไปยัง Backend -->
+    <input type="hidden" id="skillsHidden" name="skills" value="<%= initialSkills.join(', ') %>">
+  </div>
+
+  <label for="bio">แนะนำตัว</label>
+  <textarea id="bio" name="bio" rows="3" placeholder="เล่าเกี่ยวกับตัวคุณ ความสนใจ หรือประสบการณ์ทำโปรเจกต์"><%= u.bio || '' %></textarea>
+
+  <div class="acts" style="margin-top:16px">
+    <button type="submit" class="btn">บันทึกโปรไฟล์</button>
+    <a class="btn sec" href="/profile">ยกเลิก</a>
+  </div>
 </form>
+
+<script>
+  const skills = <%- JSON.stringify(initialSkills).replace(/</g, '\\u003c') %>;
+  const skillInput = document.getElementById('skillInput');
+  const skillTagsEl = document.getElementById('skillTags');
+  const skillsHidden = document.getElementById('skillsHidden');
+
+  function renderSkills() {
+    skillsHidden.value = skills.join(', ');
+    if (!skills.length) {
+      skillTagsEl.innerHTML = '';
+      return;
+    }
+    skillTagsEl.innerHTML = skills.map((s, idx) => `
+      <span class="ct-skill-pill">
+        <span>${escapeHtml(s)}</span>
+        <button type="button" onclick="removeSkill(${idx})" aria-label="ลบ ${escapeHtml(s)}">×</button>
+      </span>
+    `).join('');
+  }
+
+  function addSkillFromInput() {
+    const raw = skillInput.value.trim();
+    if (!raw) return;
+
+    // รองรับทั้งการพิมพ์ทีละทักษะ และการวางหลายทักษะคั่นด้วยจุลภาค
+    raw.split(',').map(s => s.trim()).filter(Boolean).forEach(val => {
+      if (!skills.some(s => s.toLowerCase() === val.toLowerCase())) {
+        skills.push(val);
+      }
+    });
+
+    renderSkills();
+    skillInput.value = '';
+    skillInput.focus();
+  }
+
+  function removeSkill(idx) {
+    skills.splice(idx, 1);
+    renderSkills();
+  }
+
+  document.getElementById('addSkillBtn').addEventListener('click', addSkillFromInput);
+  skillInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addSkillFromInput();
+    }
+  });
+
+  // หากพิมพ์ทักษะค้างไว้ในช่องแล้วกด "บันทึกโปรไฟล์" ทันที ให้เพิ่มให้อัตโนมัติก่อนส่งฟอร์ม
+  document.getElementById('editProfileForm').addEventListener('submit', () => {
+    if (skillInput.value.trim()) {
+      addSkillFromInput();
+    }
+  });
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  } 
+
+  // แสดงป้ายทักษะเดิมทันทีเมื่อโหลดหน้า
+  renderSkills();
+</script>

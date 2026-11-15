@@ -1,35 +1,41 @@
+<%
+  const catList = locals.categories || locals.cats || [];
+%>
 <h2>จัดการหมวดหมู่</h2>
-<form class="tools" method="post" action="/admin/categories">
-  <input name="name" placeholder="ชื่อหมวดหมู่ใหม่" aria-label="หมวดหมู่ใหม่" required><button
-    class="btn">เพิ่มหมวดหมู่</button>
+<form class="tools" method="post" action="/categories">
+  <input name="category_name" maxlength="100" placeholder="ชื่อหมวดหมู่ใหม่" aria-label="หมวดหมู่ใหม่" required>
 </form>
+
 <div class="tw">
   <table class="tb">
     <thead>
       <tr>
-        <th>หมวดหมู่</th>
-        <th>จำนวนทีม</th>
+        <th>ชื่อหมวดหมู่</th>
         <th>จัดการ</th>
       </tr>
     </thead>
     <tbody>
-      <% cats.forEach((c, i)=> { %>
+      <% catList.forEach((c, i) => {
+        const cId = typeof c === 'object' ? c.category_id : i;
+        const cName = typeof c === 'object' ? c.category_name : c;
+      %>
         <tr>
           <td>
-            <form method="post" action="/admin/categories/<%= i %>/rename" class="tools" style="margin:0">
-              <input name="name" value="<%= c %>" aria-label="ชื่อหมวดหมู่"><button
-                class="btn sec sm">เปลี่ยนชื่อ</button>
+            <form method="post" action="/categories/<%= cId %>/update" class="tools" style="margin:0">
+              <input name="category_name" maxlength="100" value="<%= cName %>" aria-label="ชื่อหมวดหมู่" required>
+              <button type="submit" class="btn sec sm">บันทึกชื่อ</button>
             </form>
           </td>
           <td>
-            <%= db.teams.filter(t=> t.cat === c).length %>
-          </td>
-          <td>
-            <form method="post" action="/admin/categories/<%= i %>/delete" onsubmit="return confirm('ลบหมวดหมู่นี้?')">
-              <button class="btn no sm">ลบ</button></form>
+            <form method="post" action="/categories/<%= cId %>/delete" onsubmit="return confirm('ลบหมวดหมู่นี้?')">
+              <button type="submit" class="btn no sm">ลบ</button>
+            </form>
           </td>
         </tr>
-        <% }) %>
+      <% }) %>
+      <% if (!catList.length) { %>
+        <tr><td colspan="2" class="mu" style="text-align:center;padding:28px">ยังไม่มีหมวดหมู่</td></tr>
+      <% } %>
     </tbody>
   </table>
 </div>

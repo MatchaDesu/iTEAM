@@ -1,16 +1,104 @@
-<section class="hero-lg"><span class="pill">เกี่ยวกับเรา</span>
-  <h1>iTEAM</h1>
-  <p class="mu">แพลตฟอร์มจับคู่คนกับทีม ช่วยให้โปรเจกต์ดี ๆ หาสมาชิกที่ใช่ได้ง่ายขึ้น และให้ทุกคนหาที่ลงมือทำงานร่วมกัน
-  </p>
-</section>
-<div class="steps">
-  <div class="card">
-    <h3>ผู้สมัคร</h3>
-    <div class="mu">ค้นหาทีม สมัครเข้าร่วม และติดตามผลได้ในที่เดียว</div>
-  </div>
-  <div class="card">
-    <h3>หัวหน้าทีม</h3>
-    <div class="mu">เปิดโพสต์ คัดเลือกผู้สมัคร และดูแลสมาชิกอย่างเป็นระบบ</div>
-  </div>
+<%
+  // ===== Data Adapter: รองรับทั้ง preview.js และ PostgreSQL (app.js) =====
+  const isMock = Boolean(locals.db);
+  const curUser = locals.user || null;
+
+  // ถ้าล็อกอินแล้วให้พาไปหน้าค้นหาทีม ถ้ายังไม่ล็อกอินให้พาไปหน้าสมัครสมาชิก
+  const startUrl = curUser
+    ? '/teams'
+    : (isMock ? '/register' : '/auth/signup');
+
+  const pillars = [
+    {
+      title: 'สำหรับผู้สมัคร',
+      desc: 'ค้นหาทีมและโปรเจกต์ที่ตรงกับทักษะ สมัครเข้าร่วม และติดตามสถานะใบสมัครได้ในที่เดียว'
+    },
+    {
+      title: 'สำหรับหัวหน้าทีม',
+      desc: 'เปิดประกาศรับสมัคร คัดเลือกสมาชิกที่เหมาะสม และดูแลสมาชิกในทีมได้อย่างเป็นระบบ'
+    },
+    {
+      title: 'ประสบการณ์ที่เรียบง่ายและชัดเจน',
+      desc: 'ออกแบบขั้นตอนการจับคู่ทีมให้กระชับ ลดความซับซ้อน เพื่อให้ทุกคนโฟกัสกับการลงมือทำได้เต็มที่'
+    },
+    {
+      title: 'เปิดพื้นที่ให้ทุกไอเดียเกิดขึ้นจริง',
+      desc: 'เชื่อมต่อนักพัฒนา นักออกแบบ และคนมีไอเดียเข้าด้วยกัน สร้างโอกาสในการทำโปรเจกต์ร่วมกันอย่างไร้ขีดจำกัด'
+    }
+  ];
+
+  const teamMembers = Array.isArray(locals.staff) && locals.staff.length
+    ? locals.staff
+    : [
+        { name: 'ชื่อ-นามสกุล', role: 'หัวหน้าโปรเจกต์' },
+        { name: 'ชื่อ-นามสกุล', role: 'ผู้ออกแบบ UI/UX' },
+        { name: 'ชื่อ-นามสกุล', role: 'นักพัฒนาระบบ' }
+      ];
+%>
+
+<div style="max-width:960px;margin:auto;display:flex;flex-direction:column;gap:40px">
+  <!-- 1. Hero Banner -->
+  <section style="position:relative;overflow:hidden;text-align:center;padding:52px 24px;border-radius:24px;background:var(--hero);border:1px solid var(--ln)">
+    <div style="position:absolute;top:-50px;left:-40px;width:180px;height:180px;border-radius:50%;background:var(--bl);opacity:.08;pointer-events:none"></div>
+    <div style="position:absolute;bottom:-60px;right:-30px;width:200px;height:200px;border-radius:50%;background:var(--bl);opacity:.08;pointer-events:none"></div>
+
+    <span class="pill" style="margin-bottom:12px">เกี่ยวกับ iTEAM</span>
+    <h1 style="margin:0 0 10px">เชื่อมไอเดียกับคนที่ใช่</h1>
+    <p class="mu" style="margin:0 auto;max-width:600px;font-size:16px">
+      แพลตฟอร์มจับคู่คนกับทีม ช่วยให้โปรเจกต์ดี ๆ หาสมาชิกได้ง่ายขึ้น และให้ทุกคนหาที่ลงมือทำงานร่วมกัน
+    </p>
+  </section>
+
+  <!-- 2. แนวคิดและสิ่งที่เราตั้งใจสร้าง (ใช้การ์ด .card มาตรฐาน) -->
+  <section>
+    <div style="margin-bottom:16px">
+      <h2 style="margin:0 0 4px">แนวคิดและสิ่งที่เราตั้งใจสร้าง</h2>
+      <p class="mu" style="margin:0;font-size:15px">พื้นที่ที่ออกแบบมาเพื่อตอบโจทย์ทั้งคนหาทีมและคนสร้างทีม</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">
+      <% pillars.forEach(item => { %>
+        <div class="card" style="padding:22px 24px">
+          <h3><%= item.title %></h3>
+          <p class="mu" style="margin:0;font-size:14px"><%= item.desc %></p>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+
+  <!-- 3. ทีมงานของเรา (ใช้การ์ด .card มาตรฐาน) -->
+  <section>
+    <div style="margin-bottom:16px">
+      <h2 style="margin:0 0 4px">ทีมงานของเรา</h2>
+      <p class="mu" style="margin:0;font-size:15px">ทีมผู้พัฒนาและออกแบบแพลตฟอร์ม iTEAM</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+      <% teamMembers.forEach(m => { %>
+        <div class="card" style="text-align:center;align-items:center;padding:28px 20px">
+          <div style="width:72px;height:72px;border-radius:50%;background:var(--sk);color:var(--bl);display:grid;place-items:center;overflow:hidden;margin-bottom:4px">
+            <% if (m.image) { %>
+              <img src="<%= m.image %>" alt="<%= m.name %>" style="width:100%;height:100%;object-fit:cover">
+            <% } else { %>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            <% } %>
+          </div>
+          <h3><%= m.name %></h3>
+          <span class="tag" style="margin:0"><%= m.role %></span>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+
+  <!-- 4. ส่วนปิดท้าย CTA กึ่งกลางหน้าจอ -->
+  <section style="text-align:center;padding:44px 16px 24px;border-top:1px solid var(--ln)">
+    <h2 style="margin:0 0 8px;font-size:clamp(22px,3.8vw,30px)">พร้อมเริ่มต้นสร้างทีมของคุณหรือยัง?</h2>
+    <p class="mu" style="margin:0 0 18px;font-size:15px">
+      ร่วมเป็นส่วนหนึ่งของพื้นที่รวมคนมีไอเดีย เริ่มต้นใช้งานได้ฟรี
+    </p>
+    <a class="btn" style="padding:12px 28px;font-size:16px" href="<%= startUrl %>">เริ่มต้นใช้งาน</a>
+  </section>
 </div>
-<div style="text-align:center;margin-top:28px"><a class="btn lg" href="/#start">เริ่มต้นใช้งาน</a></div>

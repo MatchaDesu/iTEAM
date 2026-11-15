@@ -1,5 +1,353 @@
-<h2>สร้างทีมใหม่</h2>
-<form class="card" style="max-width:560px" method="post" action="/leader/teams">
-  <%- include('../partials/team-fields', {t: {}}) %>
-    <div class="acts"><button class="btn">สร้างทีม</button><a class="btn sec" href="/leader/teams">ยกเลิก</a></div>
-</form>
+<%
+  // ===== Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
+  const catList = locals.categories || locals.cats || [];
+  const curUser = locals.user || null;
+  const curUserId = curUser ? (curUser.user_id ?? curUser.id) : null;
+  const curUserName = curUser
+    ? (curUser.first_name
+        ? `${curUser.first_name} ${curUser.last_name || ''}`.trim()
+        : (curUser.name || curUser.username || 'ฉัน'))
+    : 'ฉัน';
+
+  // รายชื่อผู้ใช้ในระบบสำหรับช่องค้นหา "เพิ่มสมาชิกในระบบ" (กรองตัวเองและแอดมินออก)
+  const rawUsers = Array.isArray(locals.users)
+    ? locals.users
+    : (Array.isArray(locals.db?.users) ? locals.db.users : []);
+
+  const searchableUsers = rawUsers
+    .filter(u => String(u.user_id ?? u.id) !== String(curUserId) && u.role !== 'admin')
+    .map(u => ({
+      id: u.user_id ?? u.id,
+      name: u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : (u.name || u.username || ''),
+      username: u.username || '',
+      email: u.email || '',
+      skills: u.skills || ''
+    }));
+%>
+
+<div class="ct-wrap">
+  <div style="margin-bottom:12px">
+    <a class="btn sec sm" href="/leader/teams">← กลับไปทีมของฉัน</a>
+  </div>
+
+  <h2 style="margin-bottom:14px">สร้างทีมใหม่</h2>
+
+  <form id="createTeamForm" class="card ct-card" method="post" action="/teams">
+    <!-- 1. ชื่อทีม / ชื่อโปรเจกต์ -->
+    <div>
+      <label for="team_name">ชื่อทีม / ชื่อโปรเจกต์ <span style="color:var(--no)">*</span></label>
+      <input
+        id="team_name"
+        name="team_name"
+        maxlength="100"
+        placeholder="เช่น ทีมพัฒนาแพลตฟอร์ม iTEAM"
+        required>
+    </div>
+
+    <!-- 2. ประเภท (หมวดหมู่) และ จำนวนสมาชิก -->
+    <div class="ct-grid-2">
+      <div>
+        <label for="category_id">ประเภท / หมวดหมู่</label>
+        <select id="category_id" name="category_id">
+          <option value="">-- เลือกหมวดหมู่ --</option>
+          <% catList.forEach(c => {
+            const cId = typeof c === 'object' ? c.category_id : c;
+            const cName = typeof c === 'object' ? c.category_name : c;
+          %>
+            <option value="<%= cId %>"><%= cName %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div>
+        <label for="max_members">จำนวนสมาชิกสูงสุด (คน)</label>
+        <input
+          id="max_members"
+          name="max_members"
+          type="number"
+          min="2"
+          max="50"
+          value="5"
+          required>
+      </div>
+    </div>
+
+    <!-- 3. รายละเอียด -->
+    <div>
+      <label for="description">รายละเอียดทีม / โปรเจกต์ <span style="color:var(--no)">*</span></label>
+      <textarea
+        id="description"
+        name="description"
+        rows="4"
+        maxlength="600"
+        placeholder="อธิบายเป้าหมายของทีม โปรเจกต์ที่กำลังทำ หรือสิ่งที่กำลังมองหา..."
+        required></textarea>
+    </div>
+
+    <!-- 4. ทักษะที่หาเป็นพิเศษ -->
+    <div class="ct-section">
+      <label for="skillInput">ทักษะที่หาเป็นพิเศษ</label>
+      <div class="mu" style="font-size:13px;margin-bottom:6px">
+        พิมพ์ทักษะที่ต้องการ แล้วกดปุ่ม <b>เพิ่ม</b> หรือกด <b>Enter</b>
+      </div>
+
+      <div id="skillTags" class="ct-tags" aria-live="polite"></div>
+
+      <div class="ct-inline-add">
+        <input
+          id="skillInput"
+          type="text"
+          maxlength="40"
+          placeholder="เช่น Figma, Frontend, Node.js, UX/UI">
+        <button type="button" id="addSkillBtn" class="btn sec">+ เพิ่ม</button>
+      </div>
+
+      <input type="hidden" id="rolesHidden" name="roles" value="">
+    </div>
+
+    <!-- 5. เพิ่มคน (สมาชิกทีมเริ่มต้น) -->
+    <div class="ct-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <label style="margin:0">เพิ่มคน (สมาชิกทีมเริ่มต้น)</label>
+        <span class="mu" style="font-size:13px">เพิ่มสมาชิกที่มีบัญชีในระบบ หรือเชิญบุคคลภายนอก</span>
+      </div>
+
+      <div class="ct-mode-tabs" role="tablist">
+        <button type="button" class="btn sm" id="tabRegUser" onclick="switchMemberMode('registered')">
+          + เพิ่มสมาชิกในระบบ
+        </button>
+        <button type="button" class="btn sec sm" id="tabExtUser" onclick="switchMemberMode('external')">
+          + เพิ่มบุคคลภายนอก
+        </button>
+      </div>
+
+      <!-- โหมด A: ค้นหาสมาชิกในระบบ -->
+      <div id="panelRegistered" class="ct-subbox">
+        <div style="position:relative">
+          <label for="userSearchInput" style="margin-top:0">ค้นหาสมาชิก</label>
+          <input
+            id="userSearchInput"
+            type="text"
+            autocomplete="off"
+            placeholder="พิมพ์ชื่อ, @username, อีเมล หรือทักษะ...">
+          <div id="userSuggestBox" class="ct-suggest" hidden></div>
+        </div>
+      </div>
+
+      <!-- โหมด B: เพิ่มบุคคลภายนอก -->
+      <div id="panelExternal" class="ct-subbox" hidden>
+        <div class="ct-ext-inputs">
+          <div>
+            <label for="extNameInput" style="margin-top:0">ชื่อ - นามสกุล</label>
+            <input id="extNameInput" type="text" maxlength="100" placeholder="เช่น สมหญิง รักดี">
+          </div>
+          <div>
+            <label for="extEmailInput" style="margin-top:0">อีเมล</label>
+            <input id="extEmailInput" type="email" placeholder="email@example.com">
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <button type="button" class="btn sm" onclick="addExternalMember()">+ เพิ่มบุคคลภายนอก</button>
+        </div>
+      </div>
+
+      <!-- รายชื่อสมาชิกในทีมปัจจุบัน -->
+      <div class="ct-member-list" id="memberList">
+        <div class="ct-member-item">
+          <div>
+            <div style="font-weight:600"><%= curUserName %></div>
+            <div class="mu" style="font-size:13px"><%= curUser?.email || 'ผู้สร้างทีม' %></div>
+          </div>
+          <span class="st ok">หัวหน้าทีม</span>
+        </div>
+      </div>
+
+      <!-- เก็บข้อมูลสมาชิกที่เพิ่มเป็น JSON ส่งไปให้ Controller บันทึกลง team_members -->
+      <input type="hidden" id="membersHidden" name="initial_members" value="[]">
+    </div>
+
+    <div class="acts" style="margin-top:20px;justify-content:flex-end">
+      <a class="btn sec" href="/leader/teams">ยกเลิก</a>
+      <button type="submit" class="btn">สร้างทีม</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  const SYSTEM_USERS = <%- JSON.stringify(searchableUsers) %>;
+
+  // ===== 1. ระบบจัดการป้ายทักษะที่หาเป็นพิเศษ =====
+  const skills = [];
+  const skillInput = document.getElementById('skillInput');
+  const skillTagsEl = document.getElementById('skillTags');
+  const rolesHidden = document.getElementById('rolesHidden');
+
+  function renderSkills() {
+    rolesHidden.value = skills.join(', ');
+    if (!skills.length) {
+      skillTagsEl.innerHTML = '';
+      return;
+    }
+    skillTagsEl.innerHTML = skills.map((s, idx) => `
+      <span class="ct-skill-pill">
+        <span>${escapeHtml(s)}</span>
+        <button type="button" onclick="removeSkill(${idx})" aria-label="ลบ ${escapeHtml(s)}">×</button>
+      </span>
+    `).join('');
+  }
+
+  function addSkillFromInput() {
+    const val = skillInput.value.trim();
+    if (!val) return;
+    if (!skills.some(s => s.toLowerCase() === val.toLowerCase())) {
+      skills.push(val);
+      renderSkills();
+    }
+    skillInput.value = '';
+    skillInput.focus();
+  }
+
+  function removeSkill(idx) {
+    skills.splice(idx, 1);
+    renderSkills();
+  }
+
+  document.getElementById('addSkillBtn').addEventListener('click', addSkillFromInput);
+  skillInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addSkillFromInput();
+    }
+  });
+
+  // ===== 2. ระบบเพิ่มสมาชิกเริ่มต้น (ในระบบ + บุคคลภายนอก) =====
+  const addedMembers = [];
+  const memberListEl = document.getElementById('memberList');
+  const membersHidden = document.getElementById('membersHidden');
+  const userSearchInput = document.getElementById('userSearchInput');
+  const userSuggestBox = document.getElementById('userSuggestBox');
+
+  function switchMemberMode(mode) {
+    const isReg = mode === 'registered';
+    document.getElementById('panelRegistered').hidden = !isReg;
+    document.getElementById('panelExternal').hidden = isReg;
+    document.getElementById('tabRegUser').className = isReg ? 'btn sm' : 'btn sec sm';
+    document.getElementById('tabExtUser').className = !isReg ? 'btn sm' : 'btn sec sm';
+  }
+
+  function renderMembers() {
+    membersHidden.value = JSON.stringify(addedMembers);
+    while (memberListEl.children.length > 1) {
+      memberListEl.removeChild(memberListEl.lastChild);
+    }
+
+    addedMembers.forEach((m, idx) => {
+      const row = document.createElement('div');
+      row.className = 'ct-member-item';
+      const badge = m.type === 'external' ? 'บุคคลภายนอก' : 'สมาชิกในระบบ';
+      row.innerHTML = `
+        <div>
+          <div style="font-weight:600">${escapeHtml(m.name)} <span class="tag" style="margin-left:4px">${badge}</span></div>
+          <div class="mu" style="font-size:13px">${escapeHtml(m.email || '')}</div>
+        </div>
+        <button type="button" class="btn no sm" onclick="removeMember(${idx})">นำออก</button>
+      `;
+      memberListEl.appendChild(row);
+    });
+  }
+
+  function removeMember(idx) {
+    addedMembers.splice(idx, 1);
+    renderMembers();
+  }
+
+  userSearchInput.addEventListener('input', () => {
+    const q = userSearchInput.value.trim().toLowerCase();
+    if (!q) {
+      userSuggestBox.hidden = true;
+      return;
+    }
+
+    const matches = SYSTEM_USERS.filter(u =>
+      !addedMembers.some(m => m.type === 'registered' && String(m.user_id) === String(u.id)) &&
+      (
+        u.name.toLowerCase().includes(q) ||
+        u.username.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.skills.toLowerCase().includes(q)
+      )
+    ).slice(0, 6);
+
+    if (!matches.length) {
+      userSuggestBox.innerHTML = '<div class="mu" style="padding:10px 12px;font-size:13px">ไม่พบสมาชิกในระบบ</div>';
+      userSuggestBox.hidden = false;
+      return;
+    }
+
+    userSuggestBox.innerHTML = matches.map(u => `
+      <button type="button" class="ct-suggest-item" onclick="selectRegisteredUser('${u.id}')">
+        <div><b>${escapeHtml(u.name)}</b> <span class="mu">${u.username ? '@' + escapeHtml(u.username) : ''}</span></div>
+        <div class="mu" style="font-size:12px">${escapeHtml(u.skills || u.email)}</div>
+      </button>
+    `).join('');
+    userSuggestBox.hidden = false;
+  });
+
+  function selectRegisteredUser(userId) {
+    const u = SYSTEM_USERS.find(x => String(x.id) === String(userId));
+    if (!u) return;
+    addedMembers.push({
+      type: 'registered',
+      user_id: u.id,
+      name: u.name,
+      email: u.email,
+      team_role: 'member'
+    });
+    userSearchInput.value = '';
+    userSuggestBox.hidden = true;
+    renderMembers();
+  }
+
+  function addExternalMember() {
+    const nameEl = document.getElementById('extNameInput');
+    const emailEl = document.getElementById('extEmailInput');
+
+    const name = nameEl.value.trim();
+    const email = emailEl.value.trim();
+
+    if (!name || !email) {
+      alert('กรุณากรอกชื่อและอีเมลของบุคคลภายนอก');
+      return;
+    }
+
+    addedMembers.push({
+      type: 'external',
+      name,
+      email,
+      team_role: 'member'
+    });
+    nameEl.value = '';
+    emailEl.value = '';
+    renderMembers();
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!userSearchInput.contains(e.target) && !userSuggestBox.contains(e.target)) {
+      userSuggestBox.hidden = true;
+    }
+  });
+
+  document.getElementById('createTeamForm').addEventListener('submit', () => {
+    if (skillInput.value.trim()) {
+      addSkillFromInput();
+    }
+  });
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
