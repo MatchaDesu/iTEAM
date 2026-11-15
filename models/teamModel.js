@@ -71,3 +71,34 @@ exports.deleteTeam = (id) => {
         });
     });
 };
+
+/*สร้างทีม และเพิ่มคนสร้างเป็น leader ใน transaction เดียวกัน (สำเร็จทั้งคู่หรือไม่ก็ยกเลิกทั้งคู่)*/
+exports.createTeamWithLeader = async (team) => {
+    const { team_name, description, category_id, created_by } = team;
+    const client = await db.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const created = await client.query(
+            `INSERT INTO teams (team_name, description, category_id, created_by)
+             VALUES ($1, $2, $3, $4) RETURNING team_id`,
+            [team_name, description, category_id, created_by]
+        );
+        const team_id = created.rows[0].team_id;
+
+        await client.query(
+            `INSERT INTO team_members (team_id, user_id, team_role)
+             VALUES ($1, $2, 'leader')`,
+            [team_id, created_by]
+        );
+
+        await client.query('COMMIT');
+        return { team_id };
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
+};

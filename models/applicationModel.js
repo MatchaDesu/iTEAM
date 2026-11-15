@@ -117,3 +117,54 @@ exports.deleteApplication = (id) => {
         });
     });
 };
+
+/*พิจารณาคำขอ: อัปเดตสถานะ และถ้าอนุมัติจะเพิ่มสมาชิกเข้าทีมด้วย ใน transaction เดียวกัน
+  คืนค่า { result: 'ok' | 'not_found' | 'already_reviewed' }*/
+exports.reviewApplication = async (id, status, reviewed_by) => {
+    const client = await db.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        // ล็อกแถวไว้ กันสองคนกดอนุมัติ/ปฏิเสธพร้อมกัน
+        const found = await client.query(
+            `SELECT application_id, user_id, team_id, status
+             FROM applications WHERE application_id = $1 FOR UPDATE`,
+            [id]
+        );
+        const application = found.rows[0];
+
+        if (!application) {
+            await client.query('ROLLBACK');
+            return { result: 'not_found' };
+        }
+        if (application.status !== 'pending') {
+            await client.query('ROLLBACK');
+            return { result: 'already_reviewed' };
+        }
+
+        await client.query(
+            `UPDATE applications
+             SET status = $1, reviewed_by = $2, reviewed_at = CURRENT_TIMESTAMP
+             WHERE application_id = $3`,
+            [status, reviewed_by, id]
+        );
+
+        if (status === 'approved') {
+            await client.query(
+                `INSERT INTO team_members (team_id, user_id, team_role)
+                 VALUES ($1, $2, 'member')
+                 ON CONFLICT (team_id, user_id) DO NOTHING`,
+                [application.team_id, application.user_id]
+            );
+        }
+
+        await client.query('COMMIT');
+        return { result: 'ok' };
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
+};

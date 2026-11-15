@@ -19,8 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
     ) DEFAULT 'member',
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL,
-    last_login TIMESTAMP NULL
+    deleted_at TIMESTAMP NULL
 );
 
 
