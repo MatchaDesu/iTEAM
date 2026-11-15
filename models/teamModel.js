@@ -3,7 +3,10 @@ const db = require('../config/db');
 /*เรีกยดูทั้งหมด*/
 exports.getAll = () => {
     return new Promise((resolve, reject) => {
-        const sql = `SELECT * FROM teams`;
+        const sql = `SELECT t.*, c.category_name
+                 FROM teams t
+                 LEFT JOIN categories c ON t.category_id = c.category_id
+                 ORDER BY t.created_at DESC`;
 
         db.query(sql, [], (err, result) => {
             if (err) return reject(err);
@@ -16,7 +19,10 @@ exports.getAll = () => {
 
 exports.getById = (id) => {
     return new Promise((resolve, reject) => {
-        const sql = `SELECT * FROM teams WHERE team_id = $1`;
+        const sql = `SELECT t.*, c.category_name
+                 FROM teams t
+                 LEFT JOIN categories c ON t.category_id = c.category_id
+                 WHERE t.team_id = $1`;
 
         db.query(sql, [id], (err, result) => {
             if (err) return reject(err);

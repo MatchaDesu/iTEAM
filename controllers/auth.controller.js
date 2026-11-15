@@ -1,7 +1,14 @@
 const userModel = require('../models/userModel');
 const { comparePassword } = require('../utils/password');
+const { COOKIE_NAME } = require('../config/session');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const regenerateSession = (req) =>
+    new Promise((resolve, reject) => req.session.regenerate((err) => (err ? reject(err) : resolve())));
+
+const saveSession = (req) =>
+    new Promise((resolve, reject) => req.session.save((err) => (err ? reject(err) : resolve())));
 
 // ตัด password ออกก่อนส่งกลับไปให้ client
 const toPublicUser = (user) => {
@@ -83,10 +90,40 @@ exports.login = async (req, res) => {
             return res.status(401).json({ message: 'email หรือ password ไม่ถูกต้อง' });
         }
 
-        // TODO: ออก token / สร้าง session ตรงนี้
+        // สร้าง session ID ใหม่ทุกครั้งที่ล็อกอิน (กัน session fixation)
+        await regenerateSession(req);
+        req.session.user = { user_id: user.user_id, role: user.role };
+        await saveSession(req);
+
         return res.json({ message: 'เข้าสู่ระบบสำเร็จ', user: toPublicUser(user) });
     } catch (err) {
         console.error('login error:', err);
+        return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
+    }
+};
+
+// POST /auth/logout
+exports.logout = (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('logout error:', err);
+            return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
+        }
+        res.clearCookie(COOKIE_NAME);
+        return res.json({ message: 'ออกจากระบบสำเร็จ' });
+    });
+};
+
+// GET /auth/me  (ใช้หลัง authenticate)
+exports.me = async (req, res) => {
+    try {
+        const user = await userModel.getById(req.user.user_id);
+        if (!user) {
+            return res.status(401).json({ message: 'ไม่พบบัญชีผู้ใช้' });
+        }
+        return res.json({ user });
+    } catch (err) {
+        console.error('me error:', err);
         return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
     }
 };
