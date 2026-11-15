@@ -1,0 +1,11 @@
+<h2>การแจ้งเตือน</h2>
+<% if (list.length) { %>
+  <div class="stack">
+    <% list.forEach(n=> { %><div class="card" style="<%= n.read ? '' : 'border-color:var(--bl)' %>">
+        <%= n.text %>
+      </div>
+      <% }) %>
+  </div>
+  <% } else { %>
+    <div class="empty">ยังไม่มีการแจ้งเตือน</div>
+    <% } %>

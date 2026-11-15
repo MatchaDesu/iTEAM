@@ -1,0 +1,11 @@
+<footer class="foot"><a href="/">หน้าแรก</a> · <a href="/guide">คู่มือการใช้งาน</a> · <a
+        href="/about">เกี่ยวกับเรา</a><br>© iTEAM· หาทีมที่ใช่ แล้วลงมือทำด้วยกัน</footer>
+<% if (flash) { %>
+    <div class="toast" role="status" id="toast">
+        <%= flash %>
+    </div>
+    <script>setTimeout(() => document.getElementById('toast')?.remove(), 2500)</script>
+    <% } %>
+        </body>
+
+        </html>

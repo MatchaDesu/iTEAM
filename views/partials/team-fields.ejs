@@ -1,0 +1,11 @@
+<%# ฟิลด์ฟอร์มทีม ใช้ร่วมกันทั้งสร้างและแก้ไข (ส่ง t={} ตอนสร้างใหม่) %>
+    <label for="name">ชื่อทีม</label><input id="name" name="name" value="<%= t.name || '' %>" required>
+    <label for="cat">หมวดหมู่</label>
+    <select id="cat" name="cat">
+        <% cats.forEach(c=> { %><option <%=c===t.cat?'selected':'' %>><%= c %>
+            </option>
+            <% }) %>
+    </select>
+    <label for="desc">รายละเอียดทีม</label><textarea id="desc" name="desc" rows="3"><%= t.desc || '' %></textarea>
+    <label for="max">จำนวนสมาชิกสูงสุด</label><input id="max" name="max" type="number" min="2"
+        value="<%= t.max || 5 %>">

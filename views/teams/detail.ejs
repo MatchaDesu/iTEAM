@@ -1,0 +1,46 @@
+<div class="card" style="max-width:720px;margin:auto">
+  <div><span class="tag">
+      <%= t.cat %>
+    </span></div>
+  <h1 style="font-size:28px;margin:0">
+    <%= t.name %>
+  </h1>
+  <p>
+    <%= t.desc %>
+  </p>
+  <h3>
+    <%= t.title %>
+  </h3>
+  <div>
+    <% t.roles.forEach(r=> { %><span class="tag">
+        <%= r %>
+      </span>
+      <% }) %>
+  </div>
+  <p class="mu">หัวหน้าทีม: <%= uname(t.leader) %><br>
+      สมาชิก (<%= t.members.length %>/<%= t.max %>): <%= t.members.map(uname).join(', ') %></p>
+
+  <% if (!user) { %>
+    <a class="btn" href="/login">เข้าสู่ระบบเพื่อสมัคร</a>
+  <% } else if (isLeader) { %>
+    <span class="mu">คุณเป็นหัวหน้าทีมนี้</span>
+  <% } else if (isMember) { %>
+    <span class="st ok">คุณเป็นสมาชิกทีมนี้แล้ว</span>
+  <% } else if (myApp && myApp.status === ' pending') { %>
+            <form method="post" action="/applications/<%= myApp.id %>/cancel">
+              <span class="st pending">รอพิจารณา</span> <button class="btn no sm">ยกเลิกใบสมัคร</button>
+            </form>
+            <% } else { %>
+              <form method="post" action="/teams/<%= t.id %>/apply">
+                <label for="msg">ข้อความถึงหัวหน้าทีม</label>
+                <textarea id="msg" name="msg" rows="3" placeholder="แนะนำตัวและทักษะที่เกี่ยวข้อง"></textarea>
+                <div style="margin-top:12px"><button class="btn" <%=canApply ? '' : 'disabled'
+                    %>>สมัครเข้าร่วมทีม</button></div>
+              </form>
+              <% if (myApp) { %>
+                <p class="mu">สถานะล่าสุด: <%= ST[myApp.status] %>
+                </p>
+                <% } %>
+                  <% } %>
+                    <div><a class="btn sec sm" href="/teams">← กลับไปค้นหา</a></div>
+</div>

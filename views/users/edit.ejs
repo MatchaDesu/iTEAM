@@ -1,0 +1,7 @@
+<h2>แก้ไขโปรไฟล์</h2>
+<form class="card" style="max-width:560px" method="post" action="/profile">
+  <label for="name">ชื่อ</label><input id="name" name="name" value="<%= user.name %>">
+  <label for="skills">ทักษะ</label><input id="skills" name="skills" value="<%= user.skills %>">
+  <label for="bio">แนะนำตัว</label><textarea id="bio" name="bio" rows="4"><%= user.bio %></textarea>
+  <div class="acts"><button class="btn">บันทึกโปรไฟล์</button><a class="btn sec" href="/profile">ยกเลิก</a></div>
+</form>

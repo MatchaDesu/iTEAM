@@ -22,10 +22,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Session
 app.use(sessionMiddleware);
 
+// View engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+
 // Landing Page
 app.get('/', (req, res) => {
     res.send('Welcome to iTEAM!');
 });
+
+
 
 // Routes
 app.use('/auth', require('./routes/auth.routes'));

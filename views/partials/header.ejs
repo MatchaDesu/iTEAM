@@ -1,0 +1,34 @@
+<% const links=!user ? [['home','/','หน้าแรก'],['search','/teams','ค้นหาทีม']] : user.role==='admin' ?
+  [['dash','/admin','ภาพรวม'],['users','/admin/users','จัดการผู้ใช้'],['teams','/admin/teams','จัดการทีม'],['cats','/admin/categories','จัดการหมวดหมู่']]
+  :
+  [['home','/','หน้าแรก'],['search','/teams','ค้นหาทีม'],['favs','/favorites','รายการโปรด'],['apps','/applications','ใบสมัครของฉัน'],['manage','/leader/teams','ทีมของฉัน'],['notes','/notifications','แจ้งเตือน'],['profile','/profile','โปรไฟล์']];
+  %>
+  <header>
+    <div class="bar">
+      <a class="logo" href="<%= user && user.role==='admin' ? '/admin' : '/' %>"><i></i>iTEAM</a>
+      <nav>
+        <% links.forEach(([k,href,label])=> { %>
+          <a href="<%= href %>" class="<%= active===k?'on':'' %>">
+            <%= label %>
+              <% if(k==='notes' && unread){ %><span class="dot">
+                  <%= unread %>
+                </span>
+                <% } %>
+                  <% if(k==='teams' && locals.pendingPosts){ %><span class="dot">
+                      <%= pendingPosts %>
+                    </span>
+                    <% } %>
+          </a>
+          <% }) %>
+      </nav>
+      <% if (user) { %>
+        <span class="mu" style="font-size:14px">
+          <%= user.name %>
+        </span>
+        <a class="btn sec sm" href="/logout">ออกจากระบบ</a>
+        <% } else { %>
+          <a class="btn sm" href="/login">เข้าสู่ระบบ</a>
+          <a class="btn sec sm" href="/register">สมัครสมาชิก</a>
+          <% } %>
+    </div>
+  </header>

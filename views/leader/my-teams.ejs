@@ -1,0 +1,96 @@
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+  <h2>ทีมของฉัน</h2><a class="btn" href="/leader/teams/new">+ สร้างทีมใหม่</a>
+</div>
+<% if (!t) { %>
+  <div class="empty">คุณยังไม่มีทีม สร้างทีมแรกเพื่อเริ่มเปิดรับสมัคร</div>
+  <% } else { const pend=apps.filter(a=> a.status === 'pending').length;
+    const tabs = [['info','ข้อมูลทีม'],['post','โพสต์รับสมัคร'],['appl','ผู้สมัคร' + (pend ? ` (${pend})` :
+    '')],['mem','สมาชิก']];
+    %>
+    <div class="tabs">
+      <% my.forEach(x=> { %><a class="chip <%= x.id===t.id?'on':'' %>" href="/leader/teams?team=<%= x.id %>">
+          <%= x.name %>
+        </a>
+        <% }) %>
+    </div>
+    <div class="tabs">
+      <% tabs.forEach(([k,n])=> { %><a class="btn sm <%= tab===k?'':'sec' %>"
+          href="/leader/teams?team=<%= t.id %>&tab=<%= k %>">
+          <%= n %>
+        </a>
+        <% }) %>
+    </div>
+
+    <% if (tab==='info' ) { %>
+      <form class="card" style="max-width:560px" method="post" action="/leader/teams/<%= t.id %>">
+        <%- include('../partials/team-fields', {t}) %>
+          <div><button class="btn">บันทึกข้อมูลทีม</button></div>
+      </form>
+
+      <% } else if (tab==='post' ) { %>
+        <form class="card" style="max-width:560px" method="post" action="/leader/teams/<%= t.id %>/post">
+          <p>สถานะโพสต์:
+            <% if (t.status==='approved' ) { %><span class="st ok">แสดงอยู่</span>
+              <% } else if (t.status==='pending' ) { %><span class="st pending">รอผู้ดูแลตรวจสอบ</span>
+                <% } else { %><span class="st no">ถูกถอดโดยผู้ดูแล<%= t.reason ? ': ' + t.reason : '' %></span>
+                  <% } %>
+          </p>
+          <label for="title">หัวข้อโพสต์</label><input id="title" name="title" value="<%= t.title %>">
+          <label for="roles">ตำแหน่งที่รับ (คั่นด้วยจุลภาค)</label><input id="roles" name="roles"
+            value="<%= t.roles.join(', ') %>">
+          <label><input type="checkbox" name="open" style="width:auto" <%=t.open ? 'checked' : '' %>>
+            เปิดรับสมัคร</label>
+          <div><button class="btn">บันทึกโพสต์</button></div>
+        </form>
+
+        <% } else if (tab==='appl' ) { %>
+          <% if (apps.length) { %>
+            <div class="stack">
+              <% apps.forEach(a=> { const ap = db.users.find(u => u.id === a.user); %>
+                <div class="card row">
+                  <div>
+                    <h3>
+                      <%= ap.name %>
+                    </h3>
+                    <div class="mu" style="font-size:14px">ทักษะ: <%= ap.skills || '-' %><br>“<%= a.msg
+                          || 'ไม่มีข้อความ' %>”</div>
+                  </div>
+                  <div class="acts">
+                    <% if (a.status==='pending' ) { %>
+                      <form method="post" action="/leader/applications/<%= a.id %>/review"><input type="hidden"
+                          name="decision" value="accept"><button class="btn sm">รับเข้าทีม</button></form>
+                      <form method="post" action="/leader/applications/<%= a.id %>/review"><input type="hidden"
+                          name="decision" value="reject"><button class="btn no sm">ปฏิเสธ</button></form>
+                      <% } else { %><span class="st <%= a.status %>">
+                          <%= ST[a.status] %>
+                        </span>
+                        <% } %>
+                  </div>
+                </div>
+                <% }) %>
+            </div>
+            <% } else { %>
+              <div class="empty">ยังไม่มีผู้สมัคร</div>
+              <% } %>
+
+                <% } else { %>
+                  <div class="stack">
+                    <% t.members.forEach(m=> { %>
+                      <div class="card row">
+                        <div>
+                          <h3>
+                            <%= uname(m) %>
+                          </h3><span class="mu">
+                            <%= m===t.leader ? 'หัวหน้าทีม' : 'สมาชิก' %>
+                          </span>
+                        </div>
+                        <% if (m !==t.leader) { %>
+                          <form method="post" action="/leader/teams/<%= t.id %>/members/<%= m %>/remove"
+                            onsubmit="return confirm('นำสมาชิกคนนี้ออกจากทีม?')"><button
+                              class="btn no sm">นำออกจากทีม</button></form>
+                          <% } %>
+                      </div>
+                      <% }) %>
+                  </div>
+                  <% } %>
+                    <% } %>

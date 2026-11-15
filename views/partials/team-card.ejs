@@ -1,0 +1,29 @@
+<div class="card">
+  <div style="display:flex;justify-content:space-between;gap:8px">
+    <div><span class="tag">
+        <%= t.cat %>
+      </span>
+      <h3>
+        <%= t.name %>
+      </h3>
+    </div>
+    <% if (user) { %>
+      <form method="post" action="/favorites/<%= t.id %>"><button class="fav" aria-label="บันทึกทีม">
+          <%= favIds.includes(t.id) ? '♥' : '♡' %>
+        </button></form>
+      <% } %>
+  </div>
+  <div class="mu" style="font-size:15px">
+    <%= t.desc %>
+  </div>
+  <div>
+    <% t.roles.forEach(r=> { %><span class="tag">
+        <%= r %>
+      </span>
+      <% }) %>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto">
+    <span class="mu" style="font-size:14px">สมาชิก <%= t.members.length %>/<%= t.max %></span>
+    <a class="btn sm" href="/teams/<%= t.id %>">ดูรายละเอียด</a>
+  </div>
+</div>

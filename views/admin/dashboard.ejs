@@ -1,0 +1,46 @@
+<h2>ภาพรวมระบบ</h2>
+<% const stat=(n, l, c)=> `<div class="card">
+    <div class="mu" style="font-size:14px">${l}</div>
+    <div style="font-size:32px;font-weight:700;line-height:1.2;color:var(${c||'--bl'})">${n}</div>
+  </div>`;
+  const mx = Math.max(1, ...cats.map(c => db.teams.filter(t => t.cat === c).length));
+  %>
+  <div class="stats">
+    <%- stat(db.users.length, 'ผู้ใช้ทั้งหมด' ) %>
+      <%- stat(db.users.filter(u=> u.suspended).length, 'บัญชีที่ถูกระงับ', '--no') %>
+        <%- stat(db.teams.length, 'ทีมทั้งหมด' ) %>
+          <%- stat(pending.length, 'โพสต์รอตรวจ' , '--wa' ) %>
+            <%- stat(db.apps.length, 'ใบสมัครทั้งหมด' , '--ok' ) %>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+    <div class="card">
+      <h3>โพสต์ที่รอตรวจ</h3>
+      <% if (pending.length) { pending.slice(0,3).forEach(t=> { %>
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap">
+          <div><b>
+              <%= t.title %>
+            </b>
+            <div class="mu" style="font-size:14px">ทีม <%= t.name %>
+            </div>
+          </div>
+          <form method="post" action="/admin/posts/<%= t.id %>/approve"><button class="btn sm">อนุมัติ</button></form>
+        </div>
+        <% }) %>
+          <div><a class="btn sec sm" href="/admin/teams?status=pending">ดูทั้งหมด</a></div>
+          <% } else { %><span class="mu">ไม่มีโพสต์ค้างตรวจ</span>
+            <% } %>
+    </div>
+    <div class="card">
+      <h3>จำนวนทีมตามหมวดหมู่</h3>
+      <% cats.forEach(c=> { const n = db.teams.filter(t => t.cat === c).length; %>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:14px"><span>
+              <%= c %>
+            </span><span class="mu">
+              <%= n %>
+            </span></div>
+          <div class="bb" style="width:<%= n/mx*100 %>%"></div>
+        </div>
+        <% }) %>
+    </div>
+  </div>

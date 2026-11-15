@@ -1,0 +1,35 @@
+<h2>จัดการหมวดหมู่</h2>
+<form class="tools" method="post" action="/admin/categories">
+  <input name="name" placeholder="ชื่อหมวดหมู่ใหม่" aria-label="หมวดหมู่ใหม่" required><button
+    class="btn">เพิ่มหมวดหมู่</button>
+</form>
+<div class="tw">
+  <table class="tb">
+    <thead>
+      <tr>
+        <th>หมวดหมู่</th>
+        <th>จำนวนทีม</th>
+        <th>จัดการ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% cats.forEach((c, i)=> { %>
+        <tr>
+          <td>
+            <form method="post" action="/admin/categories/<%= i %>/rename" class="tools" style="margin:0">
+              <input name="name" value="<%= c %>" aria-label="ชื่อหมวดหมู่"><button
+                class="btn sec sm">เปลี่ยนชื่อ</button>
+            </form>
+          </td>
+          <td>
+            <%= db.teams.filter(t=> t.cat === c).length %>
+          </td>
+          <td>
+            <form method="post" action="/admin/categories/<%= i %>/delete" onsubmit="return confirm('ลบหมวดหมู่นี้?')">
+              <button class="btn no sm">ลบ</button></form>
+          </td>
+        </tr>
+        <% }) %>
+    </tbody>
+  </table>
+</div>

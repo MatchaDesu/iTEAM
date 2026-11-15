@@ -1,0 +1,26 @@
+<h2>โปรไฟล์ของฉัน</h2>
+<div class="card" style="max-width:560px">
+  <div style="display:flex;gap:16px;align-items:center">
+    <img src="/images/profile_anonymous.svg" alt="" width="72" height="72"
+      style="border-radius:50%;background:var(--sk)" onerror="this.style.display='none'">
+    <div>
+      <h3>
+        <%= user.name %>
+      </h3>
+      <div class="mu">
+        <%= user.email %>
+      </div>
+    </div>
+  </div>
+  <div><b>ทักษะ</b>
+    <div class="mu">
+      <%= user.skills || 'ยังไม่ได้ระบุ' %>
+    </div>
+  </div>
+  <div><b>แนะนำตัว</b>
+    <div class="mu">
+      <%= user.bio || 'ยังไม่ได้ระบุ' %>
+    </div>
+  </div>
+  <div><a class="btn" href="/profile/edit">แก้ไขโปรไฟล์</a></div>
+</div>
