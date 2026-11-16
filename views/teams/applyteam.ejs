@@ -104,7 +104,7 @@
         </span>
       </p>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-        <a class="btn" href="/applications">ดูใบสมัครของฉัน</a>
+        <a class="btn" href="<%= isMock ? '/applications' : '/application' %>">ดูใบสมัครของฉัน</a>
         <a class="btn sec" href="/teams/<%= tId %>">กลับไปหน้าทีม</a>
       </div>
     </div>

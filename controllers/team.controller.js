@@ -81,7 +81,8 @@ exports.newApplicationPage = async (req, res) => {
             return res.redirect(`/teams/${teamId}`);
         }
 
-        return res.render('teams/apply', { team });
+        const members = await teamMemberModel.getMembersByTeamId(teamId);
+        return res.render('teams/applyteam', { team, members });
     } catch (err) {
         console.error('newApplicationPage error:', err);
         return res.status(500).send('เกิดข้อผิดพลาดของเซิร์ฟเวอร์');

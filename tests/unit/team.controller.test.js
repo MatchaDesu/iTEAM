@@ -118,7 +118,7 @@ describe('team.newApplicationPage', () => {
     test('renders application form for an eligible member', async () => {
         const res = makeRes();
         await team.newApplicationPage(makeReq({ params: { teamId: '5' } }), res);
-        expect(res.render).toHaveBeenCalledWith('teams/apply', expect.objectContaining({
+        expect(res.render).toHaveBeenCalledWith('teams/applyteam', expect.objectContaining({
             team: expect.objectContaining({ team_id: 5 })
         }));
     });
