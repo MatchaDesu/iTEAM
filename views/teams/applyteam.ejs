@@ -1,0 +1,191 @@
+<%
+  const isMock = Boolean(locals.db);
+  const t = locals.team || locals.t || {};
+  const tId = t.team_id ?? t.id;
+  const tName = t.team_name ?? t.name ?? 'ไม่ระบุชื่อทีม';
+  const tCat = t.category_name ?? t.cat ?? '';
+  const tDesc = t.description ?? t.desc ?? '';
+  const tMax = Number(t.max_members ?? t.max ?? 5);
+  const tStatus = t.status || 'open';
+  const leaderId = t.created_by ?? t.leader ?? null;
+
+  const curUser = locals.user || null;
+  const curUserId = curUser ? (curUser.user_id ?? curUser.id) : null;
+  const isLeader = Boolean(curUserId && leaderId && String(curUserId) === String(leaderId));
+
+  const rawMembers = Array.isArray(locals.members)
+    ? locals.members
+    : (Array.isArray(t.members) ? t.members : []);
+
+  const memberCount = rawMembers.length;
+  const isMember = Boolean(
+    curUserId && rawMembers.some(m => {
+      const mId = (m && typeof m === 'object') ? (m.user_id ?? m.id) : m;
+      return String(mId) === String(curUserId);
+    })
+  );
+
+  const mockApps = Array.isArray(locals.db?.apps) ? locals.db.apps : [];
+  const myApp = locals.myApplication
+    || (curUserId ? mockApps.find(a => String(a.team) === String(tId) && String(a.user) === String(curUserId)) : null);
+  const appStatus = (myApp && typeof myApp === 'object' && myApp.status)
+    ? myApp.status
+    : (myApp ? 'pending' : null);
+
+  const isClosed = tStatus !== 'open' || (memberCount > 0 && memberCount >= tMax);
+  const applyAction = locals.applyUrl || `/teams/${tId}/apply`;
+  const loginUrl = isMock ? '/login' : '/auth/login';
+
+  const userFullName = curUser
+    ? (curUser.first_name ? `${curUser.first_name} ${curUser.last_name || ''}`.trim() : (curUser.name || curUser.username || 'ผู้ใช้งาน'))
+    : '';
+  const userSkills = curUser && curUser.skills
+    ? String(curUser.skills).split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+%>
+
+<div class="pf-wrap">
+  <div>
+    <a class="btn sec sm" href="/teams/<%= tId %>">← กลับไปหน้ารายละเอียดทีม</a>
+  </div>
+
+  <div>
+    <h1 style="margin:0 0 6px;font-size:clamp(22px,3.5vw,28px)">ส่งคำขอเข้าร่วมทีม</h1>
+    <p class="mu" style="margin:0;font-size:15px">
+      แนะนำตัวและบอกเหตุผลที่อยากร่วมงานกับทีม เพื่อให้หัวหน้าทีมพิจารณาใบสมัครของคุณ
+    </p>
+  </div>
+
+  <!-- 1. การ์ดสรุปข้อมูลทีม -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <% if (tCat) { %>
+            <span class="tag" style="margin:0"><%= tCat %></span>
+          <% } %>
+          <span class="st <%= !isClosed ? 'ok' : 'no' %>">
+            <%= !isClosed ? 'เปิดรับสมัคร' : 'ปิดรับสมัคร' %>
+          </span>
+          <span class="mu" style="font-size:13px">
+            สมาชิก <%= memberCount > 0 ? `${memberCount}/${tMax}` : `สูงสุด ${tMax}` %> คน
+          </span>
+        </div>
+        <h2 style="margin:0 0 6px;font-size:20px"><%= tName %></h2>
+        <% if (tDesc) { %>
+          <p class="mu" style="margin:0;font-size:14px;line-height:1.6"><%= tDesc %></p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. เช็กเงื่อนไขก่อนแสดงฟอร์ม -->
+  <% if (!curUser) { %>
+    <div class="card" style="text-align:center;padding:32px 24px">
+      <h2 style="margin:0 0 8px">กรุณาเข้าสู่ระบบก่อนส่งคำขอ</h2>
+      <p class="mu" style="margin:0 0 16px">ระบบจะแนบข้อมูลโปรไฟล์และทักษะของคุณไปให้หัวหน้าทีมพิจารณา</p>
+      <a class="btn" href="<%= loginUrl %>">เข้าสู่ระบบ</a>
+    </div>
+
+  <% } else if (isLeader || isMember) { %>
+    <div class="card" style="text-align:center;padding:32px 24px">
+      <h2 style="margin:0 0 8px">คุณเป็นสมาชิกของทีมนี้อยู่แล้ว</h2>
+      <p class="mu" style="margin:0 0 16px">ไม่สามารถส่งคำขอเข้าร่วมทีมที่สังกัดอยู่ได้</p>
+      <a class="btn sec" href="/teams/<%= tId %>">กลับไปที่หน้าทีม</a>
+    </div>
+
+  <% } else if (myApp) { %>
+    <div class="card" style="text-align:center;padding:32px 24px">
+      <h2 style="margin:0 0 8px">คุณได้ส่งคำขอเข้าร่วมทีมนี้ไปแล้ว</h2>
+      <p class="mu" style="margin:0 0 16px">
+        สถานะปัจจุบัน:
+        <span class="st <%= appStatus === 'approved' ? 'accepted' : appStatus %>">
+          <%= appStatus === 'pending' ? 'รอพิจารณา' : (appStatus === 'rejected' ? 'ไม่ผ่าน' : 'ได้รับการตอบรับ') %>
+        </span>
+      </p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <a class="btn" href="/applications">ดูใบสมัครของฉัน</a>
+        <a class="btn sec" href="/teams/<%= tId %>">กลับไปหน้าทีม</a>
+      </div>
+    </div>
+
+  <% } else if (isClosed) { %>
+    <div class="card" style="text-align:center;padding:32px 24px">
+      <h2 style="margin:0 0 8px">ทีมนี้ปิดรับสมัครสมาชิกแล้ว</h2>
+      <p class="mu" style="margin:0 0 16px">ทีมมีสมาชิกครบจำนวนหรือปิดรับสมัครชั่วคราว</p>
+      <a class="btn" href="/teams">ค้นหาทีมอื่น</a>
+    </div>
+
+  <% } else { %>
+    <!-- การ์ดข้อมูลโปรไฟล์ที่จะแนบไปกับคำขอ -->
+    <div class="card">
+      <div style="font-weight:700;font-size:15px;margin-bottom:10px">
+        ข้อมูลโปรไฟล์ที่จะแนบไปกับคำขอ
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:42px;height:42px;border-radius:50%;background:var(--sk);color:var(--bl);font-weight:700;display:grid;place-items:center;flex-shrink:0">
+          <%= userFullName.charAt(0).toUpperCase() %>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:15px">
+            <%= userFullName %>
+            <% if (curUser.username) { %>
+              <span class="mu" style="font-weight:400">(@<%= curUser.username %>)</span>
+            <% } %>
+          </div>
+          <% if (curUser.email) { %>
+            <div class="mu" style="font-size:13px"><%= curUser.email %></div>
+          <% } %>
+        </div>
+      </div>
+
+      <% if (userSkills.length > 0) { %>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">
+          <% userSkills.forEach(skill => { %>
+            <span class="ct-skill-pill"><%= skill %></span>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- ฟอร์มส่งคำขอเข้าร่วมทีม -->
+    <form method="post" action="<%= applyAction %>" class="card">
+      <input type="hidden" name="team_id" value="<%= tId %>">
+
+      <label for="applyMsg" style="margin-top:0">
+        ข้อความแนะนำตัวถึงหัวหน้าทีม <span style="color:#dc2626">*</span>
+      </label>
+
+      <textarea
+        id="applyMsg"
+        name="message"
+        rows="4"
+        maxlength="500"
+        placeholder="พิมพ์ข้อความแนะนำตัวถึงหัวหน้าทีม..."
+        required></textarea>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px" class="mu">
+        <span>หัวหน้าทีมจะเห็นข้อความนี้พร้อมลิงก์โปรไฟล์ของคุณ</span>
+        <span id="applyCharCount">0 / 500</span>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;flex-wrap:wrap">
+        <a class="btn sec" href="/teams/<%= tId %>">ยกเลิก</a>
+        <button type="submit" class="btn">ส่งคำขอเข้าร่วมทีม</button>
+      </div>
+    </form>
+  <% } %>
+</div>
+
+<script>
+  (function () {
+    const textarea = document.getElementById('applyMsg');
+    const counter = document.getElementById('applyCharCount');
+    if (!textarea || !counter) return;
+
+    textarea.addEventListener('input', () => {
+      counter.textContent = `${textarea.value.length} / 500`;
+    });
+  })();
+</script>
