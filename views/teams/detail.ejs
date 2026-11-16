@@ -51,6 +51,7 @@
   const mockApps = Array.isArray(locals.db?.apps) ? locals.db.apps : [];
   const myApp = locals.myApplication
     || (curUserId ? mockApps.find(a => String(a.team) === String(tId) && String(a.user) === String(curUserId)) : null);
+  const myApplicationDetails = locals.myApplicationDetails || myApp;
 
   const canApply = Boolean(curUser && !isLeader && !isMember && !myApp && tStatus === 'open' && memberList.length < tMax);
   const loginUrl = isMock ? '/login' : '/auth/login';
@@ -62,10 +63,25 @@
   </div>
 
   <!-- 1. การ์ดหัวข้อทีม -->
-  <div class="card" style="padding:0;overflow:hidden">
+  <div class="card team-detail-card" style="padding:0;overflow:hidden">
+    <% if (curUser) { %>
+      <form class="team-card-favorite team-detail-favorite" method="post" action="/favorites/<%= tId %>/<%= isFavorite ? 'remove' : 'save' %>">
+        <input type="hidden" name="returnTo" value="/teams/<%= tId %>">
+        <button
+          type="submit"
+          class="team-favorite-btn <%= isFavorite ? 'is-favorite' : '' %>"
+          aria-label="<%= isFavorite ? 'นำออกจากทีมโปรด' : 'บันทึกเป็นทีมโปรด' %>"
+          title="<%= isFavorite ? 'นำออกจากทีมโปรด' : 'บันทึกเป็นทีมโปรด' %>">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path class="flag-pole" d="M5 21V4"></path>
+            <path class="flag-shape" d="M6 5c4-2 8 3 13 0v10c-5 3-9-2-13 0z"></path>
+          </svg>
+        </button>
+      </form>
+    <% } %>
     <!-- แบนเนอร์ด้านบน -->
     <div style="position:relative;background:linear-gradient(180deg,var(--sk) 0%,#eaf2ff 100%);padding:44px 24px;display:grid;place-items:center;border-bottom:1px solid var(--ln)">
-      <div style="position:absolute;top:16px;right:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="position:absolute;top:16px;left:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <% if (tCat) { %>
           <span class="tag" style="background:var(--sf);margin:0"><%= tCat %></span>
         <% } %>
@@ -84,9 +100,6 @@
     <div style="padding:24px 28px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap">
       <div style="flex:1;min-width:260px">
         <h1 style="margin:0 0 8px;font-size:clamp(22px,3.5vw,28px)"><%= tName %></h1>
-        <p style="margin:0 0 12px;font-size:15px;color:var(--ink);line-height:1.6">
-          <%= tDesc || 'ไม่มีรายละเอียดทีม' %>
-        </p>
         <div class="mu" style="font-size:14px">
           หมวดหมู่: <%= tCat || 'ไม่ระบุ' %> • สมาชิก <%= memberList.length %>/<%= tMax %> คน
         </div>
@@ -96,11 +109,23 @@
       <div style="display:flex;flex-direction:column;gap:8px;min-width:170px">
         <% if (isLeader) { %>
           <a class="btn" style="justify-content:center" href="/leader/teams?team=<%= tId %>">จัดการทีม</a>
-        <% } else if (!isMember) { %>
+        <% } else if (myApplicationDetails?.status === 'pending') { %>
+          <span class="st <%= myApplicationDetails.status === 'approved' ? 'accepted' : myApplicationDetails.status %>">
+            รอพิจารณา
+          </span>
+          <a class="btn sec" style="justify-content:center" href="/application/<%= myApplicationDetails.application_id %>">ดูรายละเอียดคำขอที่ส่ง</a>
+        <% } else if (isMember) { %>
+          <% if (myApplicationDetails) { %>
+            <span class="st accepted">ได้รับการตอบรับ</span>
+            <a class="btn sec" style="justify-content:center" href="/application/<%= myApplicationDetails.application_id %>">ดูรายละเอียดคำขอที่ส่ง</a>
+          <% } %>
+        <% } else { %>
+          <% if (myApplicationDetails) { %>
+            <span class="st rejected">ไม่ผ่าน</span>
+            <a class="btn sec" style="justify-content:center" href="/application/<%= myApplicationDetails.application_id %>">ดูรายละเอียดคำขอเดิม</a>
+          <% } %>
           <% if (!curUser) { %>
             <a class="btn" style="justify-content:center" href="<%= loginUrl %>">ส่งคำขอ</a>
-          <% } else if (myApp) { %>
-            <button type="button" class="btn sec" style="justify-content:center;cursor:default" disabled>ส่งคำขอแล้ว</button>
           <% } else if (canApply) { %>
             <a class="btn" style="justify-content:center" href="/teams/<%= tId %>/apply">ส่งคำขอ</a>
           <% } else { %>
@@ -113,17 +138,14 @@
             ✉ ติดต่อหัวหน้าทีม
           </a>
         <% } %>
-        <% if (curUser) { %>
-          <form method="post" action="/favorites/<%= tId %>/<%= isFavorite ? 'remove' : 'save' %>">
-            <input type="hidden" name="returnTo" value="/teams/<%= tId %>">
-            <button type="submit" class="btn sec" style="width:100%;justify-content:center">
-              <%= isFavorite ? '♥ นำออกจากทีมโปรด' : '♡ บันทึกทีมโปรด' %>
-            </button>
-          </form>
-        <% } %>
       </div>
     </div>
   </div>
+
+  <section class="card team-description-card">
+    <h2>คำอธิบายโปรเจกต์</h2>
+    <p class="team-description-text"><%= tDesc || 'ไม่มีรายละเอียดทีม' %></p>
+  </section>
 
   <!-- 2. รายชื่อสมาชิกในทีม -->
   <div class="card">

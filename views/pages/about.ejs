@@ -27,13 +27,11 @@
     }
   ];
 
-  const teamMembers = Array.isArray(locals.staff) && locals.staff.length
-    ? locals.staff
-    : [
-        { name: 'ชื่อ-นามสกุล', role: 'หัวหน้าโปรเจกต์' },
-        { name: 'ชื่อ-นามสกุล', role: 'ผู้ออกแบบ UI/UX' },
-        { name: 'ชื่อ-นามสกุล', role: 'นักพัฒนาระบบ' }
-      ];
+  const teamMembers = [
+    { name: 'นายธนกฤต ศรีดาวเรือง', studentId: '67070059' },
+    { name: 'นายนราธร อู่สุวรรณ์', studentId: '67070242' },
+    { name: 'นางสาวสายชล ไชยมูล', studentId: '67070283' }
+  ];
 %>
 
 <div style="max-width:960px;margin:auto;display:flex;flex-direction:column;gap:40px">
@@ -87,7 +85,7 @@
             <% } %>
           </div>
           <h3><%= m.name %></h3>
-          <span class="tag" style="margin:0"><%= m.role %></span>
+          <span class="tag" style="margin:0">รหัสนักศึกษา <%= m.studentId %></span>
         </div>
       <% }) %>
     </div>

@@ -93,8 +93,7 @@
                 </a>
 
                 <div class="acts">
-                  <a class="btn sec sm" href="/leader/teams?team=<%= tId %>">จัดการทีม</a>
-                  <a class="btn sm" href="/teams/<%= tId %>">ดูทีม</a>
+                  <a class="btn sm" href="/teams/<%= tId %>">จัดการทีม</a>
                 </div>
               </div>
             <% }) %>
@@ -175,10 +174,66 @@
       <% }) %>
     </div>
 
-    <% if (activeTab === 'info') { %>
-      <form class="card" style="max-width:560px" method="post" action="/leader/teams/<%= activeTeamId %>">
-        <%- include('../partials/team-fields', { t: activeTeam }) %>
-        <div style="margin-top:14px"><button type="submit" class="btn">บันทึกข้อมูลทีม</button></div>
+    <% if (activeTab === 'info') {
+      const editCategories = Array.isArray(locals.categories) ? locals.categories : [];
+      const teamName = activeTeam.team_name ?? activeTeam.name ?? '';
+      const teamDescription = activeTeam.description ?? activeTeam.desc ?? '';
+      const teamCategoryId = activeTeam.category_id ?? '';
+      const teamMemberCount = Number(activeTeam.member_count ?? rawMembers.length ?? 0);
+      const teamMaxMembers = Number(activeTeam.max_members ?? activeTeam.max ?? 5);
+      const teamStatus = activeTeam.status || 'open';
+    %>
+      <form class="card team-edit-card" method="post" action="/leader/teams/<%= activeTeamId %>">
+        <div class="team-edit-banner">
+          <div class="team-edit-banner-meta">
+            <span class="tag">แก้ไขข้อมูลทีม</span>
+            <span class="st <%= teamStatus === 'open' ? 'ok' : 'no' %>"><%= teamStatus === 'open' ? 'เปิดรับสมัคร' : 'ปิดรับสมัคร' %></span>
+          </div>
+          <div class="team-edit-banner-content">
+            <h3><%= teamName %></h3>
+          </div>
+        </div>
+
+        <div class="team-edit-fields">
+          <div class="team-edit-field">
+            <label for="team_name">ชื่อทีม</label>
+            <input id="team_name" name="team_name" maxlength="100" value="<%= teamName %>" required>
+            <span class="team-edit-help">ใช้ชื่อที่สมาชิกค้นหาและจดจำได้ง่าย</span>
+          </div>
+
+          <div class="team-edit-field">
+            <label for="category_id">หมวดหมู่ทีม</label>
+            <select id="category_id" name="category_id">
+              <option value="">-- ไม่ระบุหมวดหมู่ --</option>
+              <% editCategories.forEach(category => { %>
+                <option value="<%= category.category_id %>" <%= String(teamCategoryId) === String(category.category_id) ? 'selected' : '' %>>
+                  <%= category.category_name %>
+                </option>
+              <% }) %>
+            </select>
+            <span class="team-edit-help"><%= editCategories.length ? 'เลือกหมวดหมู่ที่ตรงกับแนวทางของทีม' : 'ยังไม่มีหมวดหมู่ให้เลือกในระบบ' %></span>
+          </div>
+
+          <div class="team-edit-field team-edit-field-wide">
+            <label for="description">รายละเอียดทีม</label>
+            <textarea id="description" name="description" rows="5" required placeholder="เล่าเกี่ยวกับเป้าหมายและสิ่งที่ทีมกำลังทำ"><%= teamDescription %></textarea>
+            <span class="team-edit-help">อธิบายเป้าหมาย สิ่งที่กำลังทำ และคนที่ทีมกำลังมองหา</span>
+          </div>
+
+          <div class="team-edit-field team-edit-field-wide">
+            <label for="status">สถานะการรับสมัคร</label>
+            <select id="status" name="status" required>
+              <option value="open" <%= teamStatus === 'open' ? 'selected' : '' %>>เปิดรับสมัคร</option>
+              <option value="closed" <%= teamStatus === 'closed' ? 'selected' : '' %>>ปิดรับสมัคร</option>
+            </select>
+            <span class="team-edit-help">เลือกว่าทีมจะแสดงรับผู้สมัครใหม่หรือไม่</span>
+          </div>
+        </div>
+
+        <div class="team-edit-actions">
+          <a class="btn sec" href="/leader/teams?team=<%= activeTeamId %>">ยกเลิก</a>
+          <button type="submit" class="btn">บันทึกข้อมูลทีม</button>
+        </div>
       </form>
 
     <% } else if (activeTab === 'appl') { %>
@@ -194,15 +249,15 @@
             const msgText = a.message ?? a.msg ?? '';
             const badgeClass = a.status === 'approved' ? 'accepted' : a.status;
           %>
-            <div class="card row">
+            <div class="card row app-card">
               <div>
-                <h3><%= apName %></h3>
+                <h3><a class="app-card-link" href="/application/<%= appId %>"><%= apName %></a></h3>
                 <div class="mu" style="font-size:14px">
                   <% if (apSub) { %>ข้อมูลผู้สมัคร: <%= apSub %><br><% } %>
                   “<%= msgText || 'ไม่มีข้อความ' %>”
                 </div>
               </div>
-              <div class="acts">
+              <div class="acts app-card-actions">
                 <% if (a.status === 'pending') { %>
                   <form method="post" action="/application/<%= appId %>/review">
                     <input type="hidden" name="status" value="approved">

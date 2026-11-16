@@ -7,6 +7,7 @@ const { authenticate } = require('../middleware/auth');
 router.use(authenticate);
 
 router.get('/', application.getMine);
+router.get('/:appId', application.getDetails);
 
 router.post('/:appId/cancel', application.cancelMine);
 router.post('/:appId/review', application.review);

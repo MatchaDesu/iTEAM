@@ -12,6 +12,7 @@
 %>
 
 <div class="card team-card">
+  <a class="team-card-open-link" href="/teams/<%= teamId %>" aria-label="ดูรายละเอียดทีม <%= teamName %>"></a>
   <% if (locals.user) { %>
     <form class="team-card-favorite" method="post" action="/favorites/<%= teamId %>/<%= isFavorite ? 'remove' : 'save' %>">
       <input type="hidden" name="returnTo" value="<%= favoriteReturnTo %>">

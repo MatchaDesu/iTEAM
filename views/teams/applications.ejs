@@ -18,12 +18,12 @@
       const msgText = a.message ?? a.msg ?? '';
       const badgeClass = a.status === 'approved' ? 'accepted' : a.status;
     %>
-      <div class="card row">
+      <div class="card row app-card">
         <div>
-          <h3><a href="/teams/<%= tId %>" style="color:inherit;text-decoration:none"><%= tName %></a></h3>
+          <h3><a class="app-card-link" href="/teams/<%= tId %>"><%= tName %></a></h3>
           <div class="mu" style="font-size:14px"><%= msgText || 'ไม่มีข้อความ' %></div>
         </div>
-        <div class="acts">
+        <div class="acts app-card-actions">
           <span class="st <%= badgeClass %>"><%= statusMap[a.status] || a.status %></span>
           <% if (a.status === 'pending') { %>
             <form method="post" action="/application/<%= appId %>/cancel">

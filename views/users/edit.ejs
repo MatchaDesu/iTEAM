@@ -19,8 +19,9 @@
         : []);
 %>
 
+<div class="profile-edit-wrap">
 <h2>แก้ไขโปรไฟล์</h2>
-<form id="editProfileForm" class="card" style="max-width:560px" method="post" action="/profile">
+<form id="editProfileForm" class="card" method="post" action="/profile">
   <label for="username">ชื่อผู้ใช้ (Username)</label>
   <input id="username" name="username" maxlength="30" value="<%= u.username || '' %>" required>
 
@@ -74,6 +75,7 @@
     <a class="btn sec" href="/profile">ยกเลิก</a>
   </div>
 </form>
+</div>
 
 <script>
   const skills = <%- JSON.stringify(initialSkills).replace(/</g, '\\u003c') %>;

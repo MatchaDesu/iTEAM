@@ -54,13 +54,14 @@ exports.createTeam = (team) => {
 
 exports.updateTeam = (id, data) => {
     return new Promise((resolve, reject) => {
-        const { team_name, description, category_id } = data;
+        const { team_name, description, category_id, status } = data;
 
         const sql = `UPDATE teams 
-                 SET team_name = $1, description = $2, category_id = $3, updated_at = CURRENT_TIMESTAMP
-                 WHERE team_id = $4`;
+                 SET team_name = $1, description = $2, category_id = $3, status = $4,
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE team_id = $5`;
 
-        db.query(sql, [team_name, description, category_id, id], (err, result) => {
+        db.query(sql, [team_name, description, category_id, status, id], (err, result) => {
             if (err) return reject(err);
 
             resolve({ changes: result.rowCount });

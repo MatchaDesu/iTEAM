@@ -61,6 +61,18 @@ exports.getByUserId = (user_id) => {
     });
 };
 
+/*ดึงคำขอล่าสุดของผู้ใช้ในทีมที่ระบุ เพื่อแสดงลิงก์รายละเอียดบนหน้าทีม*/
+exports.getLatestByUserAndTeam = async (user_id, team_id) => {
+    const result = await db.query(
+        `SELECT * FROM applications
+         WHERE user_id = $1 AND team_id = $2
+         ORDER BY applied_at DESC
+         LIMIT 1`,
+        [user_id, team_id]
+    );
+    return result.rows[0] || null;
+};
+
 /*ตรวจสอบว่าผู้ใช้นี้มีคำขอที่รออนุมัติในทีมนี้อยู่แล้วมั้ย จะได้ไม่ส่งคำขอเข้าทีมเดิมซ้ำ ๆ*/
 exports.checkPendingApplication = (user_id, team_id) => {
     return new Promise((resolve, reject) => {

@@ -41,13 +41,14 @@ exports.getById = async (req, res) => {
         }
 
         const members = await teamMemberModel.getMembersByTeamId(teamId);
-        const myApplication = req.user
-            ? await applicationModel.checkPendingApplication(req.user.user_id, teamId)
+        const myApplicationDetails = req.user
+            ? await applicationModel.getLatestByUserAndTeam(req.user.user_id, teamId)
             : null;
+        const myApplication = myApplicationDetails?.status === 'pending' ? myApplicationDetails : null;
         const isFavorite = req.user
             ? await favoriteModel.isFavorite(req.user.user_id, teamId)
             : false;
-        return res.render('teams/detail', { team, members, myApplication, isFavorite });
+        return res.render('teams/detail', { team, members, myApplication, myApplicationDetails, isFavorite });
     } catch (err) {
         console.error('getById team error:', err);
         return res.status(500).send('เกิดข้อผิดพลาดของเซิร์ฟเวอร์');
@@ -246,12 +247,13 @@ exports.getMyTeams = async (req, res) => {
             req.flash('ไม่พบทีมหรือคุณไม่มีสิทธิ์จัดการ');
             return res.redirect('/leader/teams');
         }
-        const [applications, members] = await Promise.all([
+        const [applications, members, categories] = await Promise.all([
             applicationModel.getByTeamId(teamId),
-            teamMemberModel.getMembersByTeamId(teamId)
+            teamMemberModel.getMembersByTeamId(teamId),
+            categoryModel.getAll()
         ]);
         return res.render('leader/my-teams', {
-            teams, selectedTeam, applications, members, tab: req.query.tab
+            teams, selectedTeam, applications, members, categories, tab: req.query.tab
         });
     } catch (err) {
         console.error('getMyTeams error:', err);
@@ -276,9 +278,13 @@ exports.updateMyTeam = async (req, res) => {
         req.flash('ไม่พบทีมหรือคุณไม่มีสิทธิ์จัดการ');
         return res.redirect('/leader/teams');
     }
-    const { team_name, description, category_id } = req.body || {};
+    const { team_name, description, category_id, status } = req.body || {};
     if (!team_name?.trim() || !description?.trim() || team_name.trim().length > 100) {
         req.flash('กรุณาตรวจสอบชื่อทีมและรายละเอียด');
+        return res.redirect(`/leader/teams?team=${teamId}&tab=${tab}`);
+    }
+    if (!['open', 'closed'].includes(status)) {
+        req.flash('กรุณาเลือกสถานะการรับสมัครให้ถูกต้อง');
         return res.redirect(`/leader/teams?team=${teamId}&tab=${tab}`);
     }
     try {
@@ -288,7 +294,7 @@ exports.updateMyTeam = async (req, res) => {
             return res.redirect(`/leader/teams?team=${teamId}&tab=${tab}`);
         }
         await teamModel.updateTeam(teamId, {
-            team_name: team_name.trim(), description: description.trim(), category_id: categoryId
+            team_name: team_name.trim(), description: description.trim(), category_id: categoryId, status
         });
         req.flash('บันทึกข้อมูลทีมแล้ว');
         return res.redirect(`/leader/teams?team=${teamId}&tab=${tab}`);

@@ -415,12 +415,45 @@ a.btn.sec {
     position: relative;
 }
 
+.team-detail-card {
+    position: relative;
+}
+
+.team-detail-favorite {
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+}
+
+.team-description-card {
+    gap: 10px;
+}
+
+.team-description-card h2,
+.team-description-text {
+    margin: 0;
+}
+
+.team-description-text {
+    color: var(--mu);
+    line-height: 1.8;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.team-card-open-link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+}
+
 .team-card-favorite {
     position: absolute;
     top: 12px;
     right: 12px;
     margin: 0;
-    z-index: 1;
+    z-index: 2;
 }
 
 .team-favorite-btn {
@@ -900,9 +933,120 @@ a.chip.on {
     margin: auto;
 }
 
+.profile-edit-wrap {
+    max-width: 560px;
+    margin: 0 auto;
+}
+
 .ct-card {
     padding: 24px;
     gap: 14px;
+}
+
+.team-edit-card {
+    width: 100%;
+    max-width: 880px;
+    margin: 24px auto 0;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+}
+
+.team-edit-banner {
+    padding: 22px 28px 26px;
+    background: linear-gradient(135deg, var(--sk), #f7faff 72%);
+    border-bottom: 1px solid var(--ln);
+}
+
+.team-edit-banner-meta,
+.team-edit-banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.team-edit-banner-content {
+    justify-content: flex-start;
+    margin-top: 20px;
+}
+
+.team-edit-banner-content h3 {
+    font-size: clamp(20px, 3vw, 26px);
+}
+
+.team-edit-help {
+    color: var(--mu);
+    font-size: 13px;
+}
+
+.team-edit-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 20px;
+    padding: 24px 28px;
+}
+
+.team-edit-field {
+    min-width: 0;
+}
+
+.team-edit-field label {
+    margin-top: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.team-edit-field input,
+.team-edit-field select,
+.team-edit-field textarea {
+    border-radius: 12px;
+}
+
+.team-edit-field textarea {
+    min-height: 140px;
+    resize: vertical;
+}
+
+.team-edit-field-wide {
+    grid-column: 1 / -1;
+}
+
+.team-edit-help {
+    display: block;
+    margin-top: 5px;
+}
+
+.team-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 0 28px 26px;
+}
+
+@media (max-width: 640px) {
+    .team-edit-banner,
+    .team-edit-fields {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .team-edit-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .team-edit-field-wide {
+        grid-column: auto;
+    }
+
+    .team-edit-actions {
+        flex-direction: column-reverse;
+        padding: 0 18px 20px;
+    }
+
+    .team-edit-actions .btn {
+        justify-content: center;
+    }
 }
 
 .ct-grid-2 {
@@ -1065,6 +1209,108 @@ a.chip.on {
     position: absolute;
     inset: 0;
     border-radius: inherit;
+}
+
+.app-card-actions {
+    position: relative;
+    z-index: 1;
+}
+
+.application-detail-wrap {
+    max-width: 880px;
+}
+
+.application-detail-nav,
+.application-detail-team-meta,
+.application-detail-section-heading,
+.application-detail-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.application-detail-title {
+    font-size: clamp(24px, 4vw, 32px);
+}
+
+.application-detail-team {
+    padding: 24px;
+    background: linear-gradient(135deg, var(--sk), var(--sf) 78%);
+}
+
+.application-detail-team-meta {
+    justify-content: flex-start;
+}
+
+.application-detail-team h2 {
+    margin: 12px 0 4px;
+}
+
+.application-detail-description,
+.application-detail-message p,
+.application-detail-bio p {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.application-detail-section-heading h2 {
+    margin: 0;
+}
+
+.application-detail-eyebrow {
+    color: var(--mu);
+    font-size: 13px;
+}
+
+.application-detail-contact,
+.application-detail-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-top: 12px;
+    color: var(--mu);
+}
+
+.application-detail-skills {
+    gap: 6px;
+}
+
+.application-detail-bio {
+    padding-top: 14px;
+    margin-top: 14px;
+    border-top: 1px solid var(--ln);
+}
+
+.application-detail-bio h3 {
+    margin-bottom: 5px;
+}
+
+.application-detail-profile-link {
+    align-self: flex-start;
+    margin-top: 14px;
+}
+
+.application-detail-message p {
+    line-height: 1.8;
+}
+
+.application-detail-actions {
+    justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+    .application-detail-nav > .btn {
+        flex: 1 1 auto;
+        text-align: center;
+    }
+
+    .application-detail-actions form,
+    .application-detail-actions button {
+        flex: 1;
+    }
 }
 
 /* =========================================================

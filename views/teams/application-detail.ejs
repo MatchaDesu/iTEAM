@@ -1,0 +1,114 @@
+<%
+  const applicationData = locals.application || {};
+  const teamData = locals.team || {};
+  const applicantData = locals.applicant || {};
+  const memberList = Array.isArray(locals.members) ? locals.members : [];
+  const canReview = Boolean(locals.canReview);
+  const teamId = teamData.team_id;
+  const appId = applicationData.application_id;
+  const statusMap = {
+    pending: 'รอพิจารณา',
+    approved: 'ได้รับการตอบรับ',
+    rejected: 'ไม่ผ่าน'
+  };
+  const statusClass = applicationData.status === 'approved' ? 'accepted' : applicationData.status;
+  const applicantName = `${applicantData.first_name || ''} ${applicantData.last_name || ''}`.trim()
+    || applicantData.username || 'ผู้สมัคร';
+  const skills = Array.isArray(applicantData.skills)
+    ? applicantData.skills
+    : String(applicantData.skills || '').split(',').map(skill => skill.trim()).filter(Boolean);
+  const backUrl = canReview
+    ? `/leader/teams?team=${teamId}&tab=appl`
+    : `/teams/${teamId}`;
+  const appliedAt = applicationData.applied_at
+    ? new Date(applicationData.applied_at).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
+    : '';
+%>
+
+<div class="pf-wrap application-detail-wrap">
+  <div class="application-detail-nav">
+    <a class="btn sec sm" href="<%= backUrl %>"><%= canReview ? '← กลับไปหน้าคำขอ' : '← กลับไปหน้าทีม' %></a>
+  </div>
+
+  <div>
+    <h1 class="application-detail-title">รายละเอียดคำขอเข้าร่วมทีม</h1>
+    <p class="mu" style="margin:0">ข้อมูลทีมและผู้สมัครสำหรับประกอบการพิจารณา</p>
+  </div>
+
+  <section class="card application-detail-team">
+    <div class="application-detail-team-meta">
+      <% if (teamData.category_name) { %><span class="tag"><%= teamData.category_name %></span><% } %>
+      <span class="st <%= teamData.status === 'open' ? 'ok' : 'no' %>">
+        <%= teamData.status === 'open' ? 'เปิดรับสมัคร' : 'ปิดรับสมัคร' %>
+      </span>
+      <span class="mu">สมาชิก <%= memberList.length %>/<%= teamData.max_members %> คน</span>
+    </div>
+    <h2><%= teamData.team_name %></h2>
+    <p class="mu application-detail-description"><%= teamData.description || 'ไม่มีรายละเอียดทีม' %></p>
+  </section>
+
+  <section class="card application-detail-profile">
+    <div class="application-detail-section-heading">
+      <div>
+        <span class="application-detail-eyebrow">ข้อมูลผู้สมัคร</span>
+        <h2><%= applicantName %></h2>
+      </div>
+      <span class="st <%= statusClass %>"><%= statusMap[applicationData.status] || applicationData.status %></span>
+    </div>
+
+    <div class="application-detail-contact">
+      <% if (applicantData.username) { %>
+        <span>@<%= applicantData.username %></span>
+      <% } %>
+      <% if (applicantData.email) { %>
+        <span><%= applicantData.email %></span>
+      <% } %>
+      <% if (appliedAt) { %>
+        <span>ส่งเมื่อ <%= appliedAt %></span>
+      <% } %>
+    </div>
+
+    <% if (skills.length) { %>
+      <div class="application-detail-skills">
+        <% skills.forEach(skill => { %><span class="ct-skill-pill"><%= skill %></span><% }) %>
+      </div>
+    <% } %>
+
+    <% if (applicantData.bio) { %>
+      <div class="application-detail-bio">
+        <h3>แนะนำตัว</h3>
+        <p class="mu"><%= applicantData.bio %></p>
+      </div>
+    <% } %>
+
+    <a class="btn sec sm application-detail-profile-link" href="/users/<%= applicantData.user_id %>">ดูโปรไฟล์ผู้สมัคร</a>
+  </section>
+
+  <section class="card application-detail-message">
+    <div class="application-detail-section-heading">
+      <h2>ข้อความถึงหัวหน้าทีม</h2>
+      <% if (appliedAt) { %><span class="mu" style="font-size:13px"><%= appliedAt %></span><% } %>
+    </div>
+    <p><%= applicationData.message || 'ผู้สมัครไม่ได้แนบข้อความ' %></p>
+  </section>
+
+  <% if (canReview && applicationData.status === 'pending') { %>
+    <div class="application-detail-actions">
+      <form method="post" action="/application/<%= appId %>/review">
+        <input type="hidden" name="status" value="rejected">
+        <button type="submit" class="btn no">ปฏิเสธ</button>
+      </form>
+      <form method="post" action="/application/<%= appId %>/review">
+        <input type="hidden" name="status" value="approved">
+        <button type="submit" class="btn">รับเข้าทีม</button>
+      </form>
+    </div>
+  <% } else if (!canReview && applicationData.status === 'pending') { %>
+    <div class="application-detail-actions">
+      <form method="post" action="/application/<%= appId %>/cancel"
+            onsubmit="return confirm('ยืนยันการยกเลิกคำขอเข้าร่วมทีมนี้?')">
+        <button type="submit" class="btn no">ยกเลิกการส่งคำขอ</button>
+      </form>
+    </div>
+  <% } %>
+</div>
