@@ -19,25 +19,16 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme=light]) {
-        --bg: #0B1730;
-        --sf: #12234A;
-        --ink: #EAF2FF;
-        --mu: #9DB1D1;
-        --bl: #6AA3FF;
-        --on: #08142B;
-        --sk: #1B3365;
-        --ln: #27407A;
-        --ok: #34D399;
-        --no: #F87171;
-        --wa: #FBBF24;
-        --hero: linear-gradient(180deg, #14306B, #0B1730);
-    }
-}
-
 * {
     box-sizing: border-box;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 html {
