@@ -117,16 +117,13 @@
               <a href="<%= appsUrl %>">ใบสมัครของฉัน</a>
               <a href="/leader/teams/new">+ สร้างทีมใหม่</a>
             <% } %>
+            <a href="/favorites">ทีมที่บันทึกไว้</a>
 
             <div class="nav-menu-sep"></div>
 
-            <% if (isMock) { %>
-              <a href="/logout" class="danger">ออกจากระบบ</a>
-            <% } else { %>
-              <form method="post" action="/auth/logout">
-                <button type="submit" class="danger">ออกจากระบบ</button>
-              </form>
-            <% } %>
+            <form method="post" action="/auth/logout">
+              <button type="submit" class="danger">ออกจากระบบ</button>
+            </form>
           </div>
         </div>
 

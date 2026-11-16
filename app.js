@@ -1,8 +1,11 @@
 require('dotenv').config();
 
 const express = require('express');
+const expressLayouts = require('express-ejs-layouts');
 const path = require('path');
 const { sessionMiddleware } = require('./config/session');
+const flash = require('./middleware/flash');
+const { attachUser } = require('./middleware/user');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,31 +19,42 @@ if (process.env.NODE_ENV === 'production') {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Public
+// Public (css, images)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Session
+// Session -> flash -> ผู้ใช้ที่ล็อกอิน (ต้องเรียงตามนี้)
 app.use(sessionMiddleware);
+app.use(flash);
+app.use(attachUser);
 
-// View engine
+// View engine + layouts (ค่าเริ่มต้น layouts/main, หน้า auth ระบุ layouts/auth เอง)
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-
-
-// Landing Page
-app.get('/', (req, res) => {
-    res.send('Welcome to iTEAM!');
-});
-
-
+app.use(expressLayouts);
+app.set('layout', 'layouts/main');
 
 // Routes
+app.use('/', require('./routes/pages.routes'));
 app.use('/auth', require('./routes/auth.routes'));
 app.use('/users', require('./routes/user.routes'));
+app.use('/leader', require('./routes/leader.routes'));
+app.use('/favorites', require('./routes/favorite.routes'));
+app.use('/notifications', require('./routes/notification.routes'));
 app.use('/teams', require('./routes/team.routes'));
 app.use('/categories', require('./routes/category.routes'));
 app.use('/application', require('./routes/application.routes'));
 app.use('/admin', require('./routes/admin.routes'));
+
+// 404
+app.use((req, res) => {
+    res.status(404).send('ไม่พบหน้าที่ต้องการ');
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+    console.error(err);
+    res.status(500).send('เกิดข้อผิดพลาดของเซิร์ฟเวอร์');
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running at http://localhost:${PORT}`);

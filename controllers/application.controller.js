@@ -1,86 +1,75 @@
 const applicationModel = require('../models/applicationModel');
-const { getCurrentUserId, parseId } = require('../utils/currentUser');
+const { parseId } = require('../utils/currentUser');
 const { isTeamLeader } = require('../utils/teamAccess');
 
-// GET /application  (คำขอทั้งหมดของผู้ใช้คนนี้)
 exports.getMine = async (req, res) => {
-    const userId = getCurrentUserId(req);
-    if (!userId) {
-        return res.status(401).json({ message: 'ไม่พบข้อมูลผู้ใช้' });
-    }
-
     try {
-        const applications = await applicationModel.getByUserId(userId);
-        return res.json({ applications });
+        const applications = await applicationModel.getByUserId(req.user.user_id);
+        return res.render('teams/applications', { applications });
     } catch (err) {
-        console.error('getMine error:', err);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
+        console.error('getMine applications error:', err);
+        return res.status(500).send('เกิดข้อผิดพลาดของเซิร์ฟเวอร์');
     }
 };
 
-// GET /application/:appId  (เจ้าของคำขอเท่านั้น)
-exports.getById = async (req, res) => {
-    const appId = parseId(req.params.appId);
-    const userId = getCurrentUserId(req);
-
-    if (!appId) {
-        return res.status(400).json({ message: 'appId ไม่ถูกต้อง' });
-    }
-    if (!userId) {
-        return res.status(401).json({ message: 'ไม่พบข้อมูลผู้ใช้' });
-    }
-
-    try {
-        const application = await applicationModel.getById(appId);
-        if (!application) {
-            return res.status(404).json({ message: 'ไม่พบคำขอ' });
-        }
-        if (application.user_id !== userId) {
-            return res.status(403).json({ message: 'ไม่มีสิทธิ์ดูคำขอนี้' });
-        }
-        return res.json({ application });
-    } catch (err) {
-        console.error('getById application error:', err);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
-    }
-};
-
-// PATCH /application/:appId  body: { status: 'approved' | 'rejected' }  (leader ของทีมนั้นเท่านั้น)
 exports.review = async (req, res) => {
     const appId = parseId(req.params.appId);
-    const userId = getCurrentUserId(req);
+    const userId = req.user.user_id;
     const status = req.body?.status;
+    const fallback = '/leader/teams';
 
-    if (!appId) {
-        return res.status(400).json({ message: 'appId ไม่ถูกต้อง' });
-    }
-    if (!['approved', 'rejected'].includes(status)) {
-        return res.status(400).json({ message: "status ต้องเป็น 'approved' หรือ 'rejected'" });
+    if (!appId || !['approved', 'rejected'].includes(status)) {
+        req.flash('ข้อมูลใบสมัครไม่ถูกต้อง');
+        return res.redirect(fallback);
     }
 
     try {
         const application = await applicationModel.getById(appId);
         if (!application) {
-            return res.status(404).json({ message: 'ไม่พบคำขอ' });
+            req.flash('ไม่พบใบสมัคร');
+            return res.redirect(fallback);
         }
+        const returnToTeam = `/leader/teams?team=${application.team_id}&tab=appl`;
         if (!(await isTeamLeader(application.team_id, userId))) {
-            return res.status(403).json({ message: 'เฉพาะหัวหน้าทีมเท่านั้น' });
+            req.flash('เฉพาะหัวหน้าทีมเท่านั้น');
+            return res.redirect(fallback);
         }
 
         const { result } = await applicationModel.reviewApplication(appId, status, userId);
-
-        if (result === 'not_found') {
-            return res.status(404).json({ message: 'ไม่พบคำขอ' });
-        }
-        if (result === 'already_reviewed') {
-            return res.status(409).json({ message: 'คำขอนี้ถูกพิจารณาไปแล้ว' });
-        }
-
-        return res.json({
-            message: status === 'approved' ? 'อนุมัติคำขอแล้ว' : 'ปฏิเสธคำขอแล้ว'
-        });
+        if (result === 'not_found') req.flash('ไม่พบใบสมัคร');
+        else if (result === 'already_reviewed') req.flash('ใบสมัครนี้ถูกพิจารณาแล้ว');
+        else req.flash(status === 'approved' ? 'รับผู้สมัครเข้าทีมแล้ว' : 'ปฏิเสธใบสมัครแล้ว');
+        return res.redirect(returnToTeam);
     } catch (err) {
-        console.error('review error:', err);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
+        console.error('review application error:', err);
+        req.flash('เกิดข้อผิดพลาดขณะพิจารณาใบสมัคร');
+        return res.redirect(fallback);
+    }
+};
+
+exports.cancelMine = async (req, res) => {
+    const appId = parseId(req.params.appId);
+    const userId = req.user.user_id;
+    if (!appId) {
+        req.flash('ใบสมัครไม่ถูกต้อง');
+        return res.redirect('/application');
+    }
+    try {
+        const application = await applicationModel.getById(appId);
+        if (!application || Number(application.user_id) !== Number(userId)) {
+            req.flash('ไม่พบใบสมัคร');
+            return res.redirect('/application');
+        }
+        if (application.status !== 'pending') {
+            req.flash('ยกเลิกได้เฉพาะใบสมัครที่รอพิจารณา');
+            return res.redirect('/application');
+        }
+        await applicationModel.deleteApplication(appId);
+        req.flash('ยกเลิกใบสมัครแล้ว');
+        return res.redirect('/application');
+    } catch (err) {
+        console.error('cancel application error:', err);
+        req.flash('ยกเลิกใบสมัครไม่สำเร็จ');
+        return res.redirect('/application');
     }
 };

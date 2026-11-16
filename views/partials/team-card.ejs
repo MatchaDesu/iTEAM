@@ -6,6 +6,9 @@
   const teamRoles = Array.isArray(t.roles) ? t.roles : [];
   const memberCount = Array.isArray(t.members) ? t.members.length : (t.member_count ?? null);
   const teamMax = t.max_members ?? t.max ?? null;
+  const favoriteTeamIds = locals.favoriteTeamIds || [];
+  const isFavorite = favoriteTeamIds.some(id => String(id) === String(teamId));
+  const favoriteReturnTo = locals.favoriteReturnTo || '/teams';
 %>
 
 <div class="card">
@@ -31,4 +34,10 @@
     </span>
     <a class="btn sm" href="/teams/<%= teamId %>">ดูรายละเอียด</a>
   </div>
+  <% if (locals.user) { %>
+    <form method="post" action="/favorites/<%= teamId %>/<%= isFavorite ? 'remove' : 'save' %>" style="margin-top:10px">
+      <input type="hidden" name="returnTo" value="<%= favoriteReturnTo %>">
+      <button type="submit" class="btn sec sm"><%= isFavorite ? '♥ นำออกจากทีมโปรด' : '♡ บันทึกทีมโปรด' %></button>
+    </form>
+  <% } %>
 </div>

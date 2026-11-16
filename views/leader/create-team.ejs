@@ -21,7 +21,7 @@
       name: u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : (u.name || u.username || ''),
       username: u.username || '',
       email: u.email || '',
-      skills: u.skills || ''
+      skills: Array.isArray(u.skills) ? u.skills.join(', ') : (u.skills || '')
     }));
 %>
 
@@ -109,45 +109,15 @@
     <div class="ct-section">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
         <label style="margin:0">เพิ่มคน (สมาชิกทีมเริ่มต้น)</label>
-        <span class="mu" style="font-size:13px">เพิ่มสมาชิกที่มีบัญชีในระบบ หรือเชิญบุคคลภายนอก</span>
+        <span class="mu" style="font-size:13px">เลือกสมาชิกที่มีบัญชีในระบบ</span>
       </div>
 
-      <div class="ct-mode-tabs" role="tablist">
-        <button type="button" class="btn sm" id="tabRegUser" onclick="switchMemberMode('registered')">
-          + เพิ่มสมาชิกในระบบ
-        </button>
-        <button type="button" class="btn sec sm" id="tabExtUser" onclick="switchMemberMode('external')">
-          + เพิ่มบุคคลภายนอก
-        </button>
-      </div>
-
-      <!-- โหมด A: ค้นหาสมาชิกในระบบ -->
-      <div id="panelRegistered" class="ct-subbox">
+      <div class="ct-subbox">
         <div style="position:relative">
           <label for="userSearchInput" style="margin-top:0">ค้นหาสมาชิก</label>
-          <input
-            id="userSearchInput"
-            type="text"
-            autocomplete="off"
-            placeholder="พิมพ์ชื่อ, @username, อีเมล หรือทักษะ...">
+          <input id="userSearchInput" type="text" autocomplete="off"
+                 placeholder="พิมพ์ชื่อ, @username, อีเมล หรือทักษะ...">
           <div id="userSuggestBox" class="ct-suggest" hidden></div>
-        </div>
-      </div>
-
-      <!-- โหมด B: เพิ่มบุคคลภายนอก -->
-      <div id="panelExternal" class="ct-subbox" hidden>
-        <div class="ct-ext-inputs">
-          <div>
-            <label for="extNameInput" style="margin-top:0">ชื่อ - นามสกุล</label>
-            <input id="extNameInput" type="text" maxlength="100" placeholder="เช่น สมหญิง รักดี">
-          </div>
-          <div>
-            <label for="extEmailInput" style="margin-top:0">อีเมล</label>
-            <input id="extEmailInput" type="email" placeholder="email@example.com">
-          </div>
-        </div>
-        <div style="margin-top:10px">
-          <button type="button" class="btn sm" onclick="addExternalMember()">+ เพิ่มบุคคลภายนอก</button>
         </div>
       </div>
 
@@ -220,20 +190,12 @@
     }
   });
 
-  // ===== 2. ระบบเพิ่มสมาชิกเริ่มต้น (ในระบบ + บุคคลภายนอก) =====
+  // ===== 2. ระบบเพิ่มสมาชิกเริ่มต้นจากบัญชีในระบบ =====
   const addedMembers = [];
   const memberListEl = document.getElementById('memberList');
   const membersHidden = document.getElementById('membersHidden');
   const userSearchInput = document.getElementById('userSearchInput');
   const userSuggestBox = document.getElementById('userSuggestBox');
-
-  function switchMemberMode(mode) {
-    const isReg = mode === 'registered';
-    document.getElementById('panelRegistered').hidden = !isReg;
-    document.getElementById('panelExternal').hidden = isReg;
-    document.getElementById('tabRegUser').className = isReg ? 'btn sm' : 'btn sec sm';
-    document.getElementById('tabExtUser').className = !isReg ? 'btn sm' : 'btn sec sm';
-  }
 
   function renderMembers() {
     membersHidden.value = JSON.stringify(addedMembers);
@@ -244,10 +206,9 @@
     addedMembers.forEach((m, idx) => {
       const row = document.createElement('div');
       row.className = 'ct-member-item';
-      const badge = m.type === 'external' ? 'บุคคลภายนอก' : 'สมาชิกในระบบ';
       row.innerHTML = `
         <div>
-          <div style="font-weight:600">${escapeHtml(m.name)} <span class="tag" style="margin-left:4px">${badge}</span></div>
+          <div style="font-weight:600">${escapeHtml(m.name)} <span class="tag" style="margin-left:4px">สมาชิกในระบบ</span></div>
           <div class="mu" style="font-size:13px">${escapeHtml(m.email || '')}</div>
         </div>
         <button type="button" class="btn no sm" onclick="removeMember(${idx})">นำออก</button>
@@ -269,7 +230,7 @@
     }
 
     const matches = SYSTEM_USERS.filter(u =>
-      !addedMembers.some(m => m.type === 'registered' && String(m.user_id) === String(u.id)) &&
+      !addedMembers.some(m => String(m.user_id) === String(u.id)) &&
       (
         u.name.toLowerCase().includes(q) ||
         u.username.toLowerCase().includes(q) ||
@@ -305,29 +266,6 @@
     });
     userSearchInput.value = '';
     userSuggestBox.hidden = true;
-    renderMembers();
-  }
-
-  function addExternalMember() {
-    const nameEl = document.getElementById('extNameInput');
-    const emailEl = document.getElementById('extEmailInput');
-
-    const name = nameEl.value.trim();
-    const email = emailEl.value.trim();
-
-    if (!name || !email) {
-      alert('กรุณากรอกชื่อและอีเมลของบุคคลภายนอก');
-      return;
-    }
-
-    addedMembers.push({
-      type: 'external',
-      name,
-      email,
-      team_role: 'member'
-    });
-    nameEl.value = '';
-    emailEl.value = '';
     renderMembers();
   }
 

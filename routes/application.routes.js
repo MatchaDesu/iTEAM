@@ -6,13 +6,9 @@ const { authenticate } = require('../middleware/auth');
 // ทุก route ในนี้ต้องล็อกอิน
 router.use(authenticate);
 
-// All Application from User
 router.get('/', application.getMine);
 
-// Specified Application from User
-router.get('/:appId', application.getById);
-
-// Approve / Reject (leader ของทีมเท่านั้น)
-router.patch('/:appId', application.review);
+router.post('/:appId/cancel', application.cancelMine);
+router.post('/:appId/review', application.review);
 
 module.exports = router;

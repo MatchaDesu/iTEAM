@@ -1,5 +1,7 @@
 const adminModel = require('../models/adminModel');
-const { getCurrentUserId, parseId } = require('../utils/currentUser');
+const teamModel = require('../models/teamModel');
+const categoryModel = require('../models/categoryModel');
+const { parseId } = require('../utils/currentUser');
 
 const ROLES = ['member', 'admin'];
 
@@ -7,53 +9,100 @@ const ROLES = ['member', 'admin'];
 exports.dashboard = async (req, res) => {
     try {
         const stats = await adminModel.getStats();
-        return res.json({ stats });
+        return res.render('admin/dashboard', { stats });
     } catch (err) {
         console.error('dashboard error:', err);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
+        return res.status(500).send('เกิดข้อผิดพลาดของเซิร์ฟเวอร์');
     }
 };
 
 // GET /admin/users?role=member|admin
 exports.getUsers = async (req, res) => {
-    const { role } = req.query;
+    const role = req.query.role || undefined;
     if (role !== undefined && !ROLES.includes(role)) {
-        return res.status(400).json({ message: "role ต้องเป็น 'member' หรือ 'admin'" });
+        req.flash("role ต้องเป็น 'member' หรือ 'admin'");
+        return res.redirect('/admin/users');
     }
 
     try {
         const users = await adminModel.getUsers(role);
-        return res.json({ users });
+        const q = String(req.query.q || '').trim().toLowerCase();
+        const filtered = q ? users.filter(u => [u.username, u.first_name, u.last_name, u.email]
+            .some(value => String(value || '').toLowerCase().includes(q))) : users;
+        return res.render('admin/users', { users: filtered, role, q });
     } catch (err) {
         console.error('admin getUsers error:', err);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
+        return res.status(500).send('เกิดข้อผิดพลาดของเซิร์ฟเวอร์');
     }
 };
 
-// PATCH /admin/users/:userId/role  body: { role: 'member' | 'admin' }
+exports.getTeams = async (req, res) => {
+    try {
+        const [allTeams, categories] = await Promise.all([teamModel.getAll(), categoryModel.getAll()]);
+        const q = String(req.query.q || '').trim().toLowerCase();
+        const cat = String(req.query.cat || '');
+        const teams = allTeams.filter(t => (!q || `${t.team_name} ${t.description}`.toLowerCase().includes(q))
+            && (!cat || t.category_name === cat));
+        return res.render('admin/teams', { teams, categories, q: req.query.q || '', cat });
+    } catch (err) {
+        console.error('admin getTeams error:', err);
+        return res.status(500).send('เกิดข้อผิดพลาดของเซิร์ฟเวอร์');
+    }
+};
+
+exports.deleteTeam = async (req, res) => {
+    const teamId = parseId(req.params.teamId);
+    if (!teamId) { req.flash('ทีมไม่ถูกต้อง'); return res.redirect('/admin/teams'); }
+    try {
+        const { changes } = await teamModel.deleteTeam(teamId);
+        req.flash(changes ? 'ลบทีมแล้ว' : 'ไม่พบทีม');
+        return res.redirect('/admin/teams');
+    } catch (err) {
+        console.error('admin deleteTeam error:', err);
+        req.flash('ลบทีมไม่สำเร็จ');
+        return res.redirect('/admin/teams');
+    }
+};
+
+exports.getCategories = async (req, res) => {
+    try {
+        const categories = await categoryModel.getAll();
+        return res.render('admin/categories', { categories });
+    } catch (err) {
+        console.error('admin getCategories error:', err);
+        return res.status(500).send('เกิดข้อผิดพลาดของเซิร์ฟเวอร์');
+    }
+};
+
 exports.updateRole = async (req, res) => {
     const targetId = parseId(req.params.userId);
     const role = req.body?.role;
 
     if (!targetId) {
-        return res.status(400).json({ message: 'userId ไม่ถูกต้อง' });
+        req.flash('ผู้ใช้ไม่ถูกต้อง');
+        return res.redirect('/admin/users');
     }
     if (!ROLES.includes(role)) {
-        return res.status(400).json({ message: "role ต้องเป็น 'member' หรือ 'admin'" });
+        req.flash('บทบาทไม่ถูกต้อง');
+        return res.redirect('/admin/users');
     }
     // กัน admin ลดสิทธิ์ตัวเองจนระบบไม่เหลือ admin
-    if (targetId === getCurrentUserId(req)) {
-        return res.status(400).json({ message: 'ไม่สามารถเปลี่ยนบทบาทของตัวเองได้' });
+    if (targetId === req.user.user_id) {
+        req.flash('ไม่สามารถเปลี่ยนบทบาทของตัวเองได้');
+        return res.redirect('/admin/users');
     }
 
     try {
         const { changes } = await adminModel.setUserRole(targetId, role);
         if (!changes) {
-            return res.status(404).json({ message: 'ไม่พบผู้ใช้' });
+            req.flash('ไม่พบผู้ใช้');
+            return res.redirect('/admin/users');
         }
-        return res.json({ message: 'เปลี่ยนบทบาทสำเร็จ' });
+        req.flash('เปลี่ยนบทบาทสำเร็จ');
+        return res.redirect('/admin/users');
     } catch (err) {
         console.error('updateRole error:', err);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
+        req.flash('เปลี่ยนบทบาทไม่สำเร็จ');
+        return res.redirect('/admin/users');
     }
 };

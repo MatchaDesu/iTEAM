@@ -1,109 +1,58 @@
 const categoryModel = require('../models/categoryModel');
 const { parseId } = require('../utils/currentUser');
 
-const MAX_NAME_LENGTH = 100;
-
 const validateName = (value) => {
     const name = typeof value === 'string' ? value.trim() : '';
-    if (!name) return { error: 'กรุณากรอก category_name' };
-    if (name.length > MAX_NAME_LENGTH) {
-        return { error: `category_name ต้องไม่เกิน ${MAX_NAME_LENGTH} ตัวอักษร` };
-    }
+    if (!name) return { error: 'กรุณากรอกชื่อหมวดหมู่' };
+    if (name.length > 100) return { error: 'ชื่อหมวดหมู่ต้องไม่เกิน 100 ตัวอักษร' };
     return { name };
 };
 
-// GET /categories
-exports.getAll = async (req, res) => {
-    try {
-        const categories = await categoryModel.getAll();
-        return res.json({ categories });
-    } catch (err) {
-        console.error('getAll categories error:', err);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
-    }
-};
-
-// GET /categories/:categoryId
-exports.getById = async (req, res) => {
-    const id = parseId(req.params.categoryId);
-    if (!id) {
-        return res.status(400).json({ message: 'categoryId ไม่ถูกต้อง' });
-    }
-
-    try {
-        const category = await categoryModel.getById(id);
-        if (!category) {
-            return res.status(404).json({ message: 'ไม่พบหมวดหมู่' });
-        }
-        return res.json({ category });
-    } catch (err) {
-        console.error('getById category error:', err);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
-    }
-};
-
-// POST /categories  (admin)
 exports.create = async (req, res) => {
     const { name, error } = validateName(req.body?.category_name);
     if (error) {
-        return res.status(400).json({ message: error });
+        req.flash(error);
+        return res.redirect('/admin/categories');
     }
-
     try {
-        const { category_id } = await categoryModel.createCategory(name);
-        return res.status(201).json({ message: 'เพิ่มหมวดหมู่สำเร็จ', category_id });
+        await categoryModel.createCategory(name);
+        req.flash('เพิ่มหมวดหมู่แล้ว');
     } catch (err) {
-        if (err.code === '23505') {
-            return res.status(409).json({ message: 'มีหมวดหมู่นี้อยู่แล้ว' });
-        }
         console.error('create category error:', err);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
+        req.flash(err.code === '23505' ? 'มีหมวดหมู่นี้แล้ว' : 'เพิ่มหมวดหมู่ไม่สำเร็จ');
     }
+    return res.redirect('/admin/categories');
 };
 
-// PATCH /categories/:categoryId  (admin)
 exports.update = async (req, res) => {
     const id = parseId(req.params.categoryId);
-    if (!id) {
-        return res.status(400).json({ message: 'categoryId ไม่ถูกต้อง' });
-    }
-
     const { name, error } = validateName(req.body?.category_name);
-    if (error) {
-        return res.status(400).json({ message: error });
+    if (!id || error) {
+        req.flash(error || 'หมวดหมู่ไม่ถูกต้อง');
+        return res.redirect('/admin/categories');
     }
-
     try {
         const { changes } = await categoryModel.updateCategory(id, name);
-        if (!changes) {
-            return res.status(404).json({ message: 'ไม่พบหมวดหมู่' });
-        }
-        return res.json({ message: 'แก้ไขหมวดหมู่สำเร็จ' });
+        req.flash(changes ? 'แก้ไขหมวดหมู่แล้ว' : 'ไม่พบหมวดหมู่');
     } catch (err) {
-        if (err.code === '23505') {
-            return res.status(409).json({ message: 'มีหมวดหมู่นี้อยู่แล้ว' });
-        }
         console.error('update category error:', err);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
+        req.flash(err.code === '23505' ? 'มีหมวดหมู่นี้แล้ว' : 'แก้ไขหมวดหมู่ไม่สำเร็จ');
     }
+    return res.redirect('/admin/categories');
 };
 
-// DELETE /categories/:categoryId  (admin)
-// ทีมที่ใช้หมวดนี้จะถูกตั้ง category_id เป็น NULL (ON DELETE SET NULL)
 exports.remove = async (req, res) => {
     const id = parseId(req.params.categoryId);
     if (!id) {
-        return res.status(400).json({ message: 'categoryId ไม่ถูกต้อง' });
+        req.flash('หมวดหมู่ไม่ถูกต้อง');
+        return res.redirect('/admin/categories');
     }
-
     try {
         const { changes } = await categoryModel.deleteCategory(id);
-        if (!changes) {
-            return res.status(404).json({ message: 'ไม่พบหมวดหมู่' });
-        }
-        return res.json({ message: 'ลบหมวดหมู่สำเร็จ' });
+        req.flash(changes ? 'ลบหมวดหมู่แล้ว' : 'ไม่พบหมวดหมู่');
     } catch (err) {
         console.error('delete category error:', err);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์' });
+        req.flash('ลบหมวดหมู่ไม่สำเร็จ');
     }
+    return res.redirect('/admin/categories');
 };

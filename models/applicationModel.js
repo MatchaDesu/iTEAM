@@ -128,8 +128,10 @@ exports.reviewApplication = async (id, status, reviewed_by) => {
 
         // ล็อกแถวไว้ กันสองคนกดอนุมัติ/ปฏิเสธพร้อมกัน
         const found = await client.query(
-            `SELECT application_id, user_id, team_id, status
-             FROM applications WHERE application_id = $1 FOR UPDATE`,
+            `SELECT a.application_id, a.user_id, a.team_id, a.status, t.team_name
+             FROM applications a
+             JOIN teams t ON t.team_id = a.team_id
+             WHERE a.application_id = $1 FOR UPDATE OF a`,
             [id]
         );
         const application = found.rows[0];
@@ -158,6 +160,13 @@ exports.reviewApplication = async (id, status, reviewed_by) => {
                 [application.team_id, application.user_id]
             );
         }
+
+        const outcome = status === 'approved' ? 'ได้รับการอนุมัติ' : 'ถูกปฏิเสธ';
+        await client.query(
+            `INSERT INTO notifications (user_id, type, message)
+             VALUES ($1, $2, $3)`,
+            [application.user_id, `application_${status}`, `คำขอเข้าร่วมทีม "${application.team_name}"${outcome}`]
+        );
 
         await client.query('COMMIT');
         return { result: 'ok' };

@@ -53,7 +53,7 @@
     || (curUserId ? mockApps.find(a => String(a.team) === String(tId) && String(a.user) === String(curUserId)) : null);
 
   const canApply = Boolean(curUser && !isLeader && !isMember && !myApp && tStatus === 'open' && memberList.length < tMax);
-  const applyAction = locals.applyUrl || (isMock ? `/teams/${tId}/apply` : '/application');
+  const applyAction = locals.applyUrl || `/teams/${tId}/apply`;
   const loginUrl = isMock ? '/login' : '/auth/login';
 %>
 
@@ -113,6 +113,14 @@
           <a class="btn sec" style="justify-content:center" href="/users/<%= leaderId %>">
             ✉ ติดต่อหัวหน้าทีม
           </a>
+        <% } %>
+        <% if (curUser) { %>
+          <form method="post" action="/favorites/<%= tId %>/<%= isFavorite ? 'remove' : 'save' %>">
+            <input type="hidden" name="returnTo" value="/teams/<%= tId %>">
+            <button type="submit" class="btn sec" style="width:100%;justify-content:center">
+              <%= isFavorite ? '♥ นำออกจากทีมโปรด' : '♡ บันทึกทีมโปรด' %>
+            </button>
+          </form>
         <% } %>
       </div>
     </div>

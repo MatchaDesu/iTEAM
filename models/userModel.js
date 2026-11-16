@@ -5,8 +5,8 @@ const password = require('../utils/password');
 /* เรียกดูผู้ใช้ทั้งหมด */
 exports.getAll = () => {
     return new Promise((resolve, reject) => {
-        const sql = `SELECT user_id, username, first_name, last_name, email, github, phone, profile_image, role, created_at
-                     FROM users`;
+        const sql = `SELECT user_id, username, first_name, last_name, email, github, phone, profile_image, role, skills, bio, created_at
+                     FROM users WHERE deleted_at IS NULL`;
         db.query(sql, [], (err, result) => {
             if (err) return reject(err);
             resolve(result.rows);
@@ -33,7 +33,7 @@ exports.createUser = async (user) => {
 /* เรียกดูตามไอดี */
 exports.getById = (id) => {
     return new Promise((resolve, reject) => {
-        const sql = `SELECT user_id, username, first_name, last_name, email, github, phone, profile_image, role, created_at
+        const sql = `SELECT user_id, username, first_name, last_name, email, github, phone, profile_image, role, skills, bio, created_at
                      FROM users WHERE user_id = $1`;
         db.query(sql, [id], (err, result) => {
             if (err) return reject(err);
@@ -79,12 +79,13 @@ exports.updateProfile = (id, path) => {
 /* อัปเดตข้อมูลผู้ใช้ */
 exports.updateUserInfo = (id, data) => {
     return new Promise((resolve, reject) => {
-        const { username, first_name, last_name, email, github, phone } = data;
+        const { username, first_name, last_name, email, github, phone, skills, bio } = data;
         const sql = `UPDATE users
-                     SET username = $1, first_name = $2, last_name = $3, email = $4, github = $5, phone = $6
-                     WHERE user_id = $7`;
+                     SET username = $1, first_name = $2, last_name = $3, email = $4, github = $5, phone = $6,
+                         skills = $7, bio = $8
+                     WHERE user_id = $9`;
 
-        db.query(sql, [username, first_name, last_name, email, github, phone, id], (err, result) => {
+        db.query(sql, [username, first_name, last_name, email, github, phone, skills, bio, id], (err, result) => {
             if (err) return reject(err);
             resolve({ changes: result.rowCount });
         });

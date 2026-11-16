@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS users (
     phone VARCHAR(15) NOT NULL,
     profile_image TEXT DEFAULT '/images/profile-anonymous.svg',
 
+    -- ทักษะและข้อความแนะนำตัว (แสดงในหน้าโปรไฟล์)
+    skills TEXT[] NOT NULL DEFAULT '{}',
+    bio TEXT,
+
     role TEXT CHECK (
         role IN ('member', 'admin')
     ) DEFAULT 'member',
@@ -38,6 +42,13 @@ CREATE TABLE IF NOT EXISTS teams (
 
     -- อนุญาตให้เป็น NULL เพื่อรองรับ ON DELETE SET NULL
     category_id INTEGER,
+
+    -- จำนวนสมาชิกสูงสุด, สถานะรับสมัคร, ตำแหน่ง/ทักษะที่ทีมต้องการ
+    max_members INTEGER NOT NULL DEFAULT 5
+        CHECK (max_members BETWEEN 2 AND 50),
+    status TEXT NOT NULL DEFAULT 'open'
+        CHECK (status IN ('open', 'closed')),
+    roles TEXT[] NOT NULL DEFAULT '{}',
 
     created_by INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -104,6 +115,24 @@ CREATE TABLE IF NOT EXISTS applications (
         ON DELETE SET NULL
 );
 
+-- 6. FAVORITE TEAMS
+CREATE TABLE IF NOT EXISTS favorite_teams (
+    user_id INTEGER NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+    team_id INTEGER NOT NULL REFERENCES teams (team_id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, team_id)
+);
+
+-- 7. USER NOTIFICATIONS
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+    type TEXT NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 
 -- =====================================
 -- INDEXES
@@ -134,3 +163,11 @@ ON applications (team_id, status);
 CREATE INDEX IF NOT EXISTS
     idx_applications_user
 ON applications (user_id, applied_at DESC);
+
+CREATE INDEX IF NOT EXISTS
+    idx_favorite_teams_user
+ON favorite_teams (user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS
+    idx_notifications_user
+ON notifications (user_id, created_at DESC);

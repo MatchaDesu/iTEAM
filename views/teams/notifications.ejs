@@ -6,8 +6,13 @@
 <% if (noteList.length) { %>
   <div class="stack">
     <% noteList.forEach(n => { %>
-      <div class="card" style="<%= n.read ? '' : 'border-color:var(--bl)' %>">
-        <%= n.text || n.message %>
+      <div class="card" style="<%= n.is_read ? '' : 'border-color:var(--bl)' %>">
+        <div><%= n.message %></div>
+        <% if (!n.is_read) { %>
+          <form method="post" action="/notifications/<%= n.notification_id %>/read" style="margin-top:10px">
+            <button type="submit" class="btn sec sm">ทำเครื่องหมายว่าอ่านแล้ว</button>
+          </form>
+        <% } %>
       </div>
     <% }) %>
   </div>
