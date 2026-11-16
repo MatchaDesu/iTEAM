@@ -32,7 +32,7 @@ exports.getByTeamId = (team_id) => {
                         u.username, u.first_name, u.last_name, u.profile_image
                  FROM applications a
                  JOIN users u ON a.user_id = u.user_id
-                 WHERE a.team_id = $1
+                 WHERE a.team_id = $1 AND u.deleted_at IS NULL
                  ORDER BY a.applied_at DESC`;
 
         db.query(sql, [team_id], (err, result) => {
@@ -50,6 +50,7 @@ exports.getByUserId = (user_id) => {
                         t.team_name
                  FROM applications a
                  JOIN teams t ON a.team_id = t.team_id
+                 JOIN users u ON a.user_id = u.user_id AND u.deleted_at IS NULL
                  WHERE a.user_id = $1
                  ORDER BY a.applied_at DESC`;
 
@@ -75,19 +76,61 @@ exports.checkPendingApplication = (user_id, team_id) => {
 };
 
 /*สร้างคำขอ*/
-exports.createApplication = (application) => {
-    return new Promise((resolve, reject) => {
-        const { user_id, team_id, message } = application;
+exports.createApplication = async (application) => {
+    const { user_id, team_id, message } = application;
+    const client = await db.connect();
 
-        // ใช้ RETURNING application_id เพื่อให้ PostgreSQL ส่งรหัสคำขอที่เพิ่งสร้างกลับมา
-        const sql = `INSERT INTO applications (user_id, team_id, message) 
-                 VALUES ($1, $2, $3) RETURNING application_id`;
+    try {
+        await client.query('BEGIN');
+        const teamResult = await client.query(
+            'SELECT status, max_members FROM teams WHERE team_id = $1 FOR UPDATE',
+            [team_id]
+        );
+        const team = teamResult.rows[0];
+        if (!team) {
+            const err = new Error('Team not found');
+            err.code = 'TEAM_NOT_FOUND';
+            throw err;
+        }
+        if (team.status !== 'open') {
+            const err = new Error('Team is closed');
+            err.code = 'TEAM_CLOSED';
+            throw err;
+        }
 
-        db.query(sql, [user_id, team_id, message], (err, result) => {
-            if (err) return reject(err);
-            resolve({ application_id: result.rows[0].application_id });
-        });
-    });
+        const existingMember = await client.query(
+            'SELECT 1 FROM team_members WHERE team_id = $1 AND user_id = $2',
+            [team_id, user_id]
+        );
+        if (existingMember.rowCount) {
+            const err = new Error('User is already a team member');
+            err.code = 'ALREADY_MEMBER';
+            throw err;
+        }
+
+        const memberCount = await client.query(
+            'SELECT COUNT(*)::int AS count FROM team_members tm JOIN users u ON u.user_id = tm.user_id AND u.deleted_at IS NULL WHERE tm.team_id = $1',
+            [team_id]
+        );
+        if (memberCount.rows[0].count >= team.max_members) {
+            const err = new Error('Team is full');
+            err.code = 'TEAM_FULL';
+            throw err;
+        }
+
+        const created = await client.query(
+            `INSERT INTO applications (user_id, team_id, message)
+             VALUES ($1, $2, $3) RETURNING application_id`,
+            [user_id, team_id, message]
+        );
+        await client.query('COMMIT');
+        return { application_id: created.rows[0].application_id };
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
 };
 
 /*อัปเดตสถานะคำขอ*/
@@ -121,12 +164,40 @@ exports.deleteApplication = (id) => {
 /*พิจารณาคำขอ: อัปเดตสถานะ และถ้าอนุมัติจะเพิ่มสมาชิกเข้าทีมด้วย ใน transaction เดียวกัน
   คืนค่า { result: 'ok' | 'not_found' | 'already_reviewed' }*/
 exports.reviewApplication = async (id, status, reviewed_by) => {
+    if (!['approved', 'rejected'].includes(status)) {
+        const err = new Error('Invalid application status');
+        err.code = 'INVALID_APPLICATION_STATUS';
+        throw err;
+    }
     const client = await db.connect();
 
     try {
         await client.query('BEGIN');
 
-        // ล็อกแถวไว้ กันสองคนกดอนุมัติ/ปฏิเสธพร้อมกัน
+        // หา team ก่อน แล้วล็อกตามลำดับ teams -> applications
+        // ให้ลำดับ lock ตรงกับการลบทีมที่ cascade ไปยัง applications
+        const lookup = await client.query(
+            'SELECT team_id FROM applications WHERE application_id = $1',
+            [id]
+        );
+        const teamId = lookup.rows[0]?.team_id;
+
+        if (!teamId) {
+            await client.query('ROLLBACK');
+            return { result: 'not_found' };
+        }
+
+        const lockedTeam = await client.query(
+            'SELECT status, max_members FROM teams WHERE team_id = $1 FOR UPDATE',
+            [teamId]
+        );
+        const team = lockedTeam.rows[0];
+        if (!team) {
+            await client.query('ROLLBACK');
+            return { result: 'not_found' };
+        }
+
+        // ล็อกใบสมัครหลังทีม เพื่อกันการพิจารณาซ้ำพร้อมกัน
         const found = await client.query(
             `SELECT a.application_id, a.user_id, a.team_id, a.status, t.team_name
              FROM applications a
@@ -135,7 +206,6 @@ exports.reviewApplication = async (id, status, reviewed_by) => {
             [id]
         );
         const application = found.rows[0];
-
         if (!application) {
             await client.query('ROLLBACK');
             return { result: 'not_found' };
@@ -143,6 +213,31 @@ exports.reviewApplication = async (id, status, reviewed_by) => {
         if (application.status !== 'pending') {
             await client.query('ROLLBACK');
             return { result: 'already_reviewed' };
+        }
+
+        if (status === 'approved') {
+            if (team.status !== 'open') {
+                await client.query('ROLLBACK');
+                return { result: 'team_closed' };
+            }
+
+            const existingMember = await client.query(
+                'SELECT 1 FROM team_members WHERE team_id = $1 AND user_id = $2',
+                [application.team_id, application.user_id]
+            );
+            if (existingMember.rowCount) {
+                await client.query('ROLLBACK');
+                return { result: 'already_member' };
+            }
+
+            const memberCount = await client.query(
+                'SELECT COUNT(*)::int AS count FROM team_members tm JOIN users u ON u.user_id = tm.user_id AND u.deleted_at IS NULL WHERE tm.team_id = $1',
+                [application.team_id]
+            );
+            if (memberCount.rows[0].count >= team.max_members) {
+                await client.query('ROLLBACK');
+                return { result: 'team_full' };
+            }
         }
 
         await client.query(

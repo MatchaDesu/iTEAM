@@ -19,7 +19,10 @@ exports.getAll = () => {
 
 exports.getById = (id) => {
     return new Promise((resolve, reject) => {
-        const sql = `SELECT t.*, c.category_name
+        const sql = `SELECT t.*, c.category_name,
+                        (SELECT COUNT(*)::int FROM team_members tm
+                         JOIN users u ON u.user_id = tm.user_id AND u.deleted_at IS NULL
+                         WHERE tm.team_id = t.team_id) AS member_count
                  FROM teams t
                  LEFT JOIN categories c ON t.category_id = c.category_id
                  WHERE t.team_id = $1`;

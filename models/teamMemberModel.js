@@ -7,7 +7,7 @@ exports.getMembersByTeamId = (team_id) => {
                         u.username, u.first_name, u.last_name, u.profile_image
                  FROM team_members tm
                  JOIN users u ON tm.user_id = u.user_id
-                 WHERE tm.team_id = $1`;
+                 WHERE tm.team_id = $1 AND u.deleted_at IS NULL`;
 
     db.query(sql, [team_id], (err, result) => {
       if (err) return reject(err);
@@ -24,6 +24,7 @@ exports.getTeamsByUserId = (user_id) => {
                         t.team_name, t.description, t.category_id
                  FROM team_members tm
                  JOIN teams t ON tm.team_id = t.team_id
+                 JOIN users u ON tm.user_id = u.user_id AND u.deleted_at IS NULL
                  WHERE tm.user_id = $1`;
 
     db.query(sql, [user_id], (err, result) => {

@@ -3,7 +3,9 @@ const db = require('../config/db');
 exports.getByUserId = async (userId) => {
     const result = await db.query(
         `SELECT t.*, c.category_name,
-                (SELECT COUNT(*)::int FROM team_members tm WHERE tm.team_id = t.team_id) AS member_count
+                (SELECT COUNT(*)::int FROM team_members tm
+                 JOIN users u ON u.user_id = tm.user_id AND u.deleted_at IS NULL
+                 WHERE tm.team_id = t.team_id) AS member_count
          FROM favorite_teams f
          JOIN teams t ON t.team_id = f.team_id
          LEFT JOIN categories c ON c.category_id = t.category_id

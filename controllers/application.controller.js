@@ -38,6 +38,9 @@ exports.review = async (req, res) => {
         const { result } = await applicationModel.reviewApplication(appId, status, userId);
         if (result === 'not_found') req.flash('ไม่พบใบสมัคร');
         else if (result === 'already_reviewed') req.flash('ใบสมัครนี้ถูกพิจารณาแล้ว');
+        else if (result === 'team_closed') req.flash('ทีมปิดรับสมัครแล้ว ไม่สามารถอนุมัติใบสมัครได้');
+        else if (result === 'team_full') req.flash('ทีมมีสมาชิกครบแล้ว ไม่สามารถอนุมัติใบสมัครได้');
+        else if (result === 'already_member') req.flash('ผู้สมัครเป็นสมาชิกทีมนี้อยู่แล้ว');
         else req.flash(status === 'approved' ? 'รับผู้สมัครเข้าทีมแล้ว' : 'ปฏิเสธใบสมัครแล้ว');
         return res.redirect(returnToTeam);
     } catch (err) {

@@ -10,14 +10,14 @@ const { parseId } = require('../utils/currentUser');
 // GET /teams
 exports.getAll = async (req, res) => {
     try {
-        let teams = await teamModel.getAll();
-        const categories = await categoryModel.getAll();
-        const favoriteTeamIds = req.user
-            ? await favoriteModel.getTeamIdsByUserId(req.user.user_id)
-            : [];
+        const [allTeams, categories, favoriteTeamIds] = await Promise.all([
+            teamModel.getAll(),
+            categoryModel.getAll(),
+            req.user ? favoriteModel.getTeamIdsByUserId(req.user.user_id) : Promise.resolve([])
+        ]);
         const q = String(req.query.q || '').trim().toLowerCase();
         const cat = String(req.query.cat || '');
-        teams = teams.filter(t => (!q || `${t.team_name} ${t.description} ${(t.roles || []).join(' ')}`.toLowerCase().includes(q))
+        const teams = allTeams.filter(t => (!q || `${t.team_name} ${t.description} ${(t.roles || []).join(' ')}`.toLowerCase().includes(q))
             && (!cat || String(t.category_id) === cat || t.category_name === cat));
         return res.render('teams/explore', {
             teams, categories, favoriteTeamIds, q: req.query.q || '', cat
@@ -77,6 +77,13 @@ exports.apply = async (req, res) => {
             return fail('ไม่พบทีม');
         }
 
+        if (team.status !== 'open') {
+            return fail('ทีมนี้ปิดรับสมัครแล้ว');
+        }
+        if (Number(team.member_count) >= Number(team.max_members)) {
+            return fail('ทีมนี้มีสมาชิกครบแล้ว');
+        }
+
         if (await teamMemberModel.checkMember(teamId, userId)) {
             return fail('คุณเป็นสมาชิกของทีมนี้อยู่แล้ว');
         }
@@ -94,6 +101,10 @@ exports.apply = async (req, res) => {
         req.flash('ส่งคำขอเข้าทีมสำเร็จ');
         return res.redirect(`/teams/${teamId}`);
     } catch (err) {
+        if (err.code === 'TEAM_NOT_FOUND') return fail('ไม่พบทีม');
+        if (err.code === 'TEAM_CLOSED') return fail('ทีมนี้ปิดรับสมัครแล้ว');
+        if (err.code === 'TEAM_FULL') return fail('ทีมนี้มีสมาชิกครบแล้ว');
+        if (err.code === 'ALREADY_MEMBER') return fail('คุณเป็นสมาชิกของทีมนี้อยู่แล้ว');
         // unique_pending_application: กรณีส่งคำขอซ้ำพร้อมกัน
         if (err.code === '23505') {
             return fail('คุณมีคำขอที่รออนุมัติในทีมนี้อยู่แล้ว');
