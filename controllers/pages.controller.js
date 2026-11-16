@@ -2,6 +2,7 @@
 // active = ชื่อแท็บที่ header.ejs จะไฮไลต์
 
 exports.home = (req, res) => {
+    if (req.user?.role === 'admin') return res.redirect('/admin');
     res.render('pages/home', { active: 'home' });
 };
 

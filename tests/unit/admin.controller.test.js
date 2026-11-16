@@ -1,6 +1,6 @@
-jest.mock('../../models/adminModel', () => ({ getStats: jest.fn(), getUsers: jest.fn(), setUserRole: jest.fn() }));
-jest.mock('../../models/teamModel', () => ({ getAll: jest.fn(), deleteTeam: jest.fn() }));
-jest.mock('../../models/categoryModel', () => ({ getAll: jest.fn() }));
+jest.mock('../../models/adminModel', () => ({ getStats: jest.fn(), getUsers: jest.fn() }));
+jest.mock('../../models/teamModel', () => ({ getAll: jest.fn(), deleteTeam: jest.fn(), updateCategory: jest.fn() }));
+jest.mock('../../models/categoryModel', () => ({ getAll: jest.fn(), getById: jest.fn() }));
 
 const adminModel = require('../../models/adminModel');
 const teamModel = require('../../models/teamModel');
@@ -12,10 +12,11 @@ beforeEach(() => {
     jest.clearAllMocks();
     adminModel.getStats.mockResolvedValue({ total_users: 1 });
     adminModel.getUsers.mockResolvedValue([]);
-    adminModel.setUserRole.mockResolvedValue({ changes: 1 });
     teamModel.getAll.mockResolvedValue([]);
     teamModel.deleteTeam.mockResolvedValue({ changes: 1 });
+    teamModel.updateCategory.mockResolvedValue({ changes: 1 });
     categoryModel.getAll.mockResolvedValue([]);
+    categoryModel.getById.mockResolvedValue({ category_id: 2 });
 });
 
 describe('admin read pages', () => {
@@ -53,7 +54,7 @@ describe('admin read pages', () => {
             users: [expect.objectContaining({ username: 'alice' })], role: 'member', q: 'alice'
         });
     });
-    test('teams filter by text and category; categories page renders list', async () => {
+    test('teams filter by text and category', async () => {
         teamModel.getAll.mockResolvedValue([
             { team_name: 'Code', description: 'Web', category_name: 'Tech' },
             { team_name: 'Art', description: 'Brand', category_name: 'Design' }
@@ -64,10 +65,8 @@ describe('admin read pages', () => {
         expect(res.render).toHaveBeenCalledWith('admin/teams', expect.objectContaining({
             teams: [expect.objectContaining({ team_name: 'Code' })], categories: [{ category_name: 'Tech' }]
         }));
-        await admin.getCategories(makeReq(), res);
-        expect(res.render).toHaveBeenCalledWith('admin/categories', { categories: [{ category_name: 'Tech' }] });
     });
-    test.each(['getUsers', 'getTeams', 'getCategories'])('%s returns server error on model failure', async handler => {
+    test.each(['getUsers', 'getTeams'])('%s returns server error on model failure', async handler => {
         adminModel.getUsers.mockRejectedValue(new Error('db'));
         teamModel.getAll.mockRejectedValue(new Error('db'));
         categoryModel.getAll.mockRejectedValue(new Error('db'));
@@ -103,35 +102,24 @@ describe('admin mutations', () => {
         await admin.deleteTeam(req, makeRes());
         expect(req.flash).toHaveBeenCalledWith('ลบทีมไม่สำเร็จ');
     });
-    test.each([
-        [{ params: { userId: 'bad' }, body: { role: 'admin' } }, 'ผู้ใช้ไม่ถูกต้อง'],
-        [{ params: { userId: '8' }, body: { role: 'owner' } }, 'บทบาทไม่ถูกต้อง'],
-        [{ params: { userId: '7' }, body: { role: 'admin' } }, 'ไม่สามารถเปลี่ยนบทบาทของตัวเองได้']
-    ])('rejects invalid role changes', async (overrides, message) => {
-        const req = makeReq(overrides);
-        const res = makeRes();
-        await admin.updateRole(req, res);
-        expect(req.flash).toHaveBeenCalledWith(message);
-        expect(adminModel.setUserRole).not.toHaveBeenCalled();
-        expect(res.redirect).toHaveBeenCalledWith('/admin/users');
-    });
-    test('updates role, handles missing user and database error', async () => {
-        let req = makeReq({ params: { userId: '8' }, body: { role: 'admin' } });
-        let res = makeRes();
-        await admin.updateRole(req, res);
-        expect(adminModel.setUserRole).toHaveBeenCalledWith(8, 'admin');
-        expect(req.flash).toHaveBeenCalledWith('เปลี่ยนบทบาทสำเร็จ');
+    test('updates a team category, allows clearing it, and validates IDs', async () => {
+        let req = makeReq({ params: { teamId: 'bad' }, body: { category_id: '2' } });
+        await admin.updateTeamCategory(req, makeRes());
+        expect(teamModel.updateCategory).not.toHaveBeenCalled();
+        expect(req.flash).toHaveBeenCalledWith('ทีม/หมวดหมู่ไม่ถูกต้อง');
 
-        adminModel.setUserRole.mockResolvedValueOnce({ changes: 0 });
-        req = makeReq({ params: { userId: '8' }, body: { role: 'member' } });
-        res = makeRes();
-        await admin.updateRole(req, res);
-        expect(req.flash).toHaveBeenCalledWith('ไม่พบผู้ใช้');
+        req = makeReq({ params: { teamId: '9' }, body: { category_id: '999' } });
+        categoryModel.getById.mockResolvedValueOnce(null);
+        await admin.updateTeamCategory(req, makeRes());
+        expect(teamModel.updateCategory).not.toHaveBeenCalled();
 
-        adminModel.setUserRole.mockRejectedValueOnce(new Error('db'));
-        jest.spyOn(console, 'error').mockImplementation(() => {});
-        req = makeReq({ params: { userId: '8' }, body: { role: 'member' } });
-        await admin.updateRole(req, makeRes());
-        expect(req.flash).toHaveBeenCalledWith('เปลี่ยนบทบาทไม่สำเร็จ');
+        req = makeReq({ params: { teamId: '9' }, body: { category_id: '2' } });
+        await admin.updateTeamCategory(req, makeRes());
+        expect(teamModel.updateCategory).toHaveBeenCalledWith(9, 2);
+        expect(req.flash).toHaveBeenCalledWith('อัปเดตหมวดหมู่ทีมแล้ว');
+
+        req = makeReq({ params: { teamId: '9' }, body: { category_id: '' } });
+        await admin.updateTeamCategory(req, makeRes());
+        expect(teamModel.updateCategory).toHaveBeenCalledWith(9, null);
     });
 });

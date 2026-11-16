@@ -75,6 +75,13 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((req, res, next) => {
+  if (res.locals.user?.role === 'admin'
+      && !req.path.startsWith('/admin')
+      && req.path !== '/logout') return res.redirect('/admin');
+  next();
+});
+
 const visible = teams.filter(t => t.status === 'approved' && !t.hidden);
 
 // ---------- หน้าทั่วไป ----------
@@ -94,6 +101,16 @@ app.get('/teams', (req, res) => {
     (!cat || t.cat === cat) &&
     (!q || (t.name + t.desc + t.roles.join(' ')).toLowerCase().includes(q)));
   res.render('teams/explore', { active: 'search', teams: list, q: req.query.q || '', cat });
+});
+
+app.get('/teams/:id/apply', (req, res) => {
+  if (!res.locals.user) return res.redirect('/login');
+  const t = teams.find(x => x.id === +req.params.id);
+  if (!t) return res.status(404).send('ไม่พบทีม');
+  return res.render('teams/apply', { team: {
+    team_id: t.id, team_name: t.name, category_name: t.cat, description: t.desc,
+    member_count: t.members.length, max_members: t.max
+  } });
 });
 
 app.get('/teams/:id', (req, res) => {
@@ -154,6 +171,7 @@ app.get('/admin/users', (req, res) => {
   const list = users.filter(u =>
     (!q || (u.name + u.email).toLowerCase().includes(q)) &&
     (f === '' || (f === 's') === u.suspended));
+  list.sort((a, b) => Number(b.role === 'admin') - Number(a.role === 'admin'));
   res.render('admin/users', { active: 'users', users: list, q: req.query.q || '', f });
 });
 
@@ -167,7 +185,6 @@ app.get('/admin/teams', (req, res) => {
   res.render('admin/teams', { active: 'teams', teams: list, q: req.query.q || '', cat, st });
 });
 
-app.get('/admin/categories', (req, res) => res.render('admin/categories', { active: 'cats' }));
 app.get('/admin/posts', (req, res) => res.redirect('/admin/teams'));
 
 // จำลองล็อกอิน: ไม่ตรวจรหัสผ่านจริง แค่สลับบทบาทเพื่อดูหน้าเว็บ

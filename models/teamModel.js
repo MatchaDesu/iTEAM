@@ -68,6 +68,14 @@ exports.updateTeam = (id, data) => {
     });
 };
 
+exports.updateCategory = async (id, category_id) => {
+    const result = await db.query(
+        `UPDATE teams SET category_id = $1, updated_at = CURRENT_TIMESTAMP WHERE team_id = $2`,
+        [category_id, id]
+    );
+    return { changes: result.rowCount };
+};
+
 
 exports.deleteTeam = (id) => {
     return new Promise((resolve, reject) => {

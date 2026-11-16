@@ -27,10 +27,15 @@ describe('auth page handlers', () => {
         expect(res.render).toHaveBeenCalledWith(view, { layout: 'layouts/auth' });
     });
 
-    test.each(['showLogin', 'showSignup'])('%s redirects an existing user', handler => {
+    test.each([
+        ['showLogin', { role: 'member' }, '/'],
+        ['showSignup', { role: 'member' }, '/'],
+        ['showLogin', { role: 'admin' }, '/admin'],
+        ['showSignup', { role: 'admin' }, '/admin']
+    ])('%s redirects an existing user by role', (handler, user, destination) => {
         const res = makeRes();
-        auth[handler](makeReq(), res);
-        expect(res.redirect).toHaveBeenCalledWith('/');
+        auth[handler](makeReq({ user }), res);
+        expect(res.redirect).toHaveBeenCalledWith(destination);
     });
 });
 
@@ -122,6 +127,14 @@ describe('login', () => {
         expect(req.session.user).toEqual({ user_id: 9 });
         expect(req.session.save).toHaveBeenCalled();
         expect(res.redirect).toHaveBeenCalledWith('/');
+    });
+
+    test('redirects admin account to admin dashboard', async () => {
+        userModel.getByEmail.mockResolvedValue({ user_id: 9, role: 'admin', first_name: 'A', password: 'hash' });
+        password.comparePassword.mockResolvedValue(true);
+        const res = makeRes();
+        await auth.login(makeReq({ body: { email: 'admin@example.com', password: 'input' } }), res);
+        expect(res.redirect).toHaveBeenCalledWith('/admin');
     });
 
     test('handles session and database errors', async () => {

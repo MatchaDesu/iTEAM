@@ -33,12 +33,27 @@
       <% teamList.forEach(t => {
         const tId = t.team_id ?? t.id;
         const tName = t.team_name ?? t.name;
-        const tCat = t.category_name ?? t.cat ?? 'ไม่ระบุ';
         const tDesc = t.description ?? t.desc ?? '';
       %>
         <tr>
           <td><b><a href="/teams/<%= tId %>" style="text-decoration:none;color:inherit"><%= tName %></a></b></td>
-          <td><span class="tag" style="margin:0"><%= tCat %></span></td>
+          <td>
+            <form class="tools" method="post" action="/admin/teams/<%= tId %>/category" style="margin:0;min-width:190px">
+              <select name="category_id" aria-label="หมวดหมู่ของทีม <%= tName %>">
+                <option value="">ไม่ระบุ</option>
+                <% catList.forEach(c => {
+                  const categoryId = c.category_id ?? c.id ?? c.category_name ?? c;
+                  const categoryName = c.category_name ?? c.name ?? c;
+                  const teamCategoryId = t.category_id ?? t.cat ?? '';
+                %>
+                  <option value="<%= categoryId %>" <%= String(teamCategoryId) === String(categoryId) ? 'selected' : '' %>>
+                    <%= categoryName %>
+                  </option>
+                <% }) %>
+              </select>
+              <button type="submit" class="btn sec sm">บันทึก</button>
+            </form>
+          </td>
           <td class="mu"><%= tDesc %></td>
           <td>
             <form method="post" action="/admin/teams/<%= tId %>/delete"

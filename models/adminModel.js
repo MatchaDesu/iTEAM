@@ -12,19 +12,10 @@ exports.getUsers = async (role) => {
         params.push(role);
         sql += ` AND role = $1`;
     }
-    sql += ` ORDER BY created_at DESC`;
+    sql += ` ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, created_at DESC`;
 
     const result = await db.query(sql, params);
     return result.rows;
-};
-
-/*เปลี่ยนบทบาท (เฉพาะบัญชีที่ยังไม่ถูกลบ)*/
-exports.setUserRole = async (id, role) => {
-    const result = await db.query(
-        `UPDATE users SET role = $1 WHERE user_id = $2 AND deleted_at IS NULL`,
-        [role, id]
-    );
-    return { changes: result.rowCount };
 };
 
 /*ตัวเลขสรุปสำหรับ dashboard*/

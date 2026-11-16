@@ -393,6 +393,76 @@ a.btn.sec {
     gap: 10px;
 }
 
+.toast {
+    position: fixed;
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    padding: 12px 20px;
+    border: 1px solid var(--ln);
+    border-radius: 12px;
+    background: var(--ink);
+    color: var(--sf);
+    box-shadow: 0 8px 28px rgba(14, 39, 71, .2);
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.team-card {
+    position: relative;
+}
+
+.team-card-favorite {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    margin: 0;
+    z-index: 1;
+}
+
+.team-favorite-btn {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    padding: 6px;
+    border: 1px solid var(--ln);
+    border-radius: 50%;
+    background: var(--sf);
+    color: var(--mu);
+    cursor: pointer;
+}
+
+.team-favorite-btn:hover,
+.team-favorite-btn.is-favorite {
+    color: var(--bl);
+}
+
+.team-favorite-btn svg {
+    width: 21px;
+    height: 21px;
+    overflow: visible;
+}
+
+.team-favorite-btn .flag-pole,
+.team-favorite-btn .flag-shape {
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.team-favorite-btn .flag-shape {
+    fill: transparent;
+}
+
+.team-favorite-btn.is-favorite .flag-shape {
+    fill: currentColor;
+}
+
 .card.row {
     flex-direction: row;
     align-items: center;

@@ -32,7 +32,7 @@ const validCreateBody = overrides => ({
 beforeEach(() => {
     jest.clearAllMocks();
     teamModel.getAll.mockResolvedValue([]);
-    teamModel.getById.mockResolvedValue({ team_id: 5, team_name: 'Team One' });
+    teamModel.getById.mockResolvedValue({ team_id: 5, team_name: 'Team One', status: 'open', max_members: 5, member_count: 2 });
     categoryModel.getAll.mockResolvedValue([]);
     categoryModel.getById.mockResolvedValue({ category_id: 2 });
     favoriteModel.getTeamIdsByUserId.mockResolvedValue([]);
@@ -114,10 +114,31 @@ describe('team.getById', () => {
     });
 });
 
+describe('team.newApplicationPage', () => {
+    test('renders application form for an eligible member', async () => {
+        const res = makeRes();
+        await team.newApplicationPage(makeReq({ params: { teamId: '5' } }), res);
+        expect(res.render).toHaveBeenCalledWith('teams/apply', expect.objectContaining({
+            team: expect.objectContaining({ team_id: 5 })
+        }));
+    });
+    test.each([
+        [{ status: 'closed', max_members: 5, member_count: 2 }, 'ทีมนี้ปิดรับสมัครแล้ว'],
+        [{ status: 'open', max_members: 2, member_count: 2 }, 'ทีมนี้มีสมาชิกครบแล้ว']
+    ])('redirects when team is closed or full', async (teamData, message) => {
+        teamModel.getById.mockResolvedValue({ team_id: 5, ...teamData });
+        const req = makeReq({ params: { teamId: '5' } });
+        const res = makeRes();
+        await team.newApplicationPage(req, res);
+        expect(req.flash).toHaveBeenCalledWith(message);
+        expect(res.redirect).toHaveBeenCalledWith('/teams/5');
+    });
+});
+
 describe('team.apply', () => {
     test.each([
         [{ params: { teamId: '0' } }, 'ทีมไม่ถูกต้อง', '/teams'],
-        [{ params: { teamId: '5' }, user: null }, 'กรุณาเข้าสู่ระบบก่อน', '/teams/5']
+        [{ params: { teamId: '5' }, user: null }, 'กรุณาเข้าสู่ระบบก่อน', '/teams/5/apply']
     ])('validates ID and authentication', async (overrides, message, path) => {
         const req = makeReq(overrides);
         const res = makeRes();
@@ -132,7 +153,7 @@ describe('team.apply', () => {
         await team.apply(req, res);
         expect(req.flash).toHaveBeenCalledWith('ไม่พบทีม');
 
-        teamModel.getById.mockResolvedValue({ team_id: 5 });
+        teamModel.getById.mockResolvedValue({ team_id: 5, status: 'open', max_members: 5, member_count: 2 });
         memberModel.checkMember.mockResolvedValue({ user_id: 7 });
         req = makeReq({ params: { teamId: '5' } }); res = makeRes();
         await team.apply(req, res);
@@ -167,7 +188,7 @@ describe('team.apply', () => {
         const res = makeRes();
         await team.apply(req, res);
         expect(req.flash).toHaveBeenCalledWith(message);
-        expect(res.redirect).toHaveBeenCalledWith('/teams/5');
+        expect(res.redirect).toHaveBeenCalledWith('/teams/5/apply');
     });
 });
 

@@ -19,13 +19,13 @@ const fail = (req, res, path, message) => {
 };
 // GET /auth/login
 exports.showLogin = (req, res) => {
-    if (req.user) return res.redirect('/');
+    if (req.user) return res.redirect(req.user.role === 'admin' ? '/admin' : '/');
     return res.render('auth/signIn', { layout: 'layouts/auth' });
 };
 
 // GET /auth/signup
 exports.showSignup = (req, res) => {
-    if (req.user) return res.redirect('/');
+    if (req.user) return res.redirect(req.user.role === 'admin' ? '/admin' : '/');
     return res.render('auth/signUp', { layout: 'layouts/auth' });
 };
 
@@ -114,7 +114,7 @@ exports.login = async (req, res) => {
         req.flash(`ยินดีต้อนรับ ${user.first_name}`);
         await saveSession(req);
 
-        return res.redirect('/');
+        return res.redirect(user.role === 'admin' ? '/admin' : '/');
     } catch (err) {
         console.error('login error:', err);
         return fail(req, res, back, 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์ กรุณาลองใหม่');

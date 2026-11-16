@@ -32,8 +32,7 @@
     ? [
         ['dash', '/admin', 'ภาพรวม'],
         ['users', '/admin/users', 'จัดการผู้ใช้'],
-        ['teams', '/admin/teams', 'จัดการทีม'],
-        ['cats', '/admin/categories', 'จัดการหมวดหมู่']
+        ['teams', '/admin/teams', 'จัดการทีม']
       ]
     : [
         ['home', '/', 'หน้าแรก'],
@@ -110,14 +109,13 @@
               <a href="/admin">แดชบอร์ดผู้ดูแล</a>
               <a href="/admin/users">จัดการผู้ใช้</a>
               <a href="/admin/teams">จัดการทีม</a>
-              <a href="/admin/categories">จัดการหมวดหมู่</a>
             <% } else { %>
               <a href="/profile">โปรไฟล์ของฉัน</a>
               <a href="/leader/teams">ทีมของฉัน</a>
               <a href="<%= appsUrl %>">ใบสมัครของฉัน</a>
               <a href="/leader/teams/new">+ สร้างทีมใหม่</a>
             <% } %>
-            <a href="/favorites">ทีมที่บันทึกไว้</a>
+            <% if (curUser.role !== 'admin') { %><a href="/favorites">ทีมที่บันทึกไว้</a><% } %>
 
             <div class="nav-menu-sep"></div>
 

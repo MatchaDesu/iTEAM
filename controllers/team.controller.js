@@ -54,6 +54,40 @@ exports.getById = async (req, res) => {
     }
 };
 
+// GET /teams/:teamId/apply
+exports.newApplicationPage = async (req, res) => {
+    const teamId = parseId(req.params.teamId);
+    if (!teamId) return res.status(400).send('ไม่พบทีม');
+
+    try {
+        const team = await teamModel.getById(teamId);
+        if (!team) return res.status(404).send('ไม่พบทีม');
+
+        if (team.status !== 'open' || Number(team.member_count) >= Number(team.max_members)) {
+            req.flash(team.status !== 'open' ? 'ทีมนี้ปิดรับสมัครแล้ว' : 'ทีมนี้มีสมาชิกครบแล้ว');
+            return res.redirect(`/teams/${teamId}`);
+        }
+
+        const [membership, pendingApplication] = await Promise.all([
+            teamMemberModel.checkMember(teamId, req.user.user_id),
+            applicationModel.checkPendingApplication(req.user.user_id, teamId)
+        ]);
+        if (membership) {
+            req.flash('คุณเป็นสมาชิกของทีมนี้อยู่แล้ว');
+            return res.redirect(`/teams/${teamId}`);
+        }
+        if (pendingApplication) {
+            req.flash('คุณมีคำขอที่รอพิจารณาในทีมนี้อยู่แล้ว');
+            return res.redirect(`/teams/${teamId}`);
+        }
+
+        return res.render('teams/apply', { team });
+    } catch (err) {
+        console.error('newApplicationPage error:', err);
+        return res.status(500).send('เกิดข้อผิดพลาดของเซิร์ฟเวอร์');
+    }
+};
+
 // POST /teams/:teamId/apply
 exports.apply = async (req, res) => {
     const teamId = parseId(req.params.teamId);
@@ -61,7 +95,7 @@ exports.apply = async (req, res) => {
     const message = req.body?.message?.trim() || null;
     const fail = (message) => {
         req.flash(message);
-        return res.redirect(teamId ? `/teams/${teamId}` : '/teams');
+        return res.redirect(teamId ? `/teams/${teamId}/apply` : '/teams');
     };
 
     if (!teamId) {

@@ -2,7 +2,6 @@
   const userList = Array.isArray(locals.users) ? locals.users : [];
   const qText = locals.q || '';
   const roleFilter = locals.role || locals.f || '';
-  const curAdminId = locals.user ? (locals.user.user_id ?? locals.user.id) : null;
 %>
 <h2>จัดการผู้ใช้</h2>
 <form class="tools" method="get" action="/admin/users">
@@ -23,14 +22,11 @@
         <th>อีเมล</th>
         <th>เบอร์โทร</th>
         <th>บทบาท</th>
-        <th>จัดการสิทธิ์</th>
       </tr>
     </thead>
     <tbody>
       <% userList.forEach(u => {
-        const uId = u.user_id ?? u.id;
         const fullName = u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : (u.name || '-');
-        const nextRole = u.role === 'admin' ? 'member' : 'admin';
       %>
         <tr>
           <td><b><%= fullName %></b></td>
@@ -42,23 +38,10 @@
               <%= u.role === 'admin' ? 'ผู้ดูแล' : 'สมาชิก' %>
             </span>
           </td>
-          <td>
-            <% if (String(uId) !== String(curAdminId)) { %>
-              <form method="post" action="/admin/users/<%= uId %>/role"
-                    onsubmit="return confirm('ยืนยันการเปลี่ยนบทบาทผู้ใช้?')">
-                <input type="hidden" name="role" value="<%= nextRole %>">
-                <button type="submit" class="btn <%= u.role === 'admin' ? 'no' : 'sec' %> sm">
-                  <%= u.role === 'admin' ? 'ลดสิทธิ์เป็นสมาชิก' : 'ตั้งเป็นผู้ดูแล' %>
-                </button>
-              </form>
-            <% } else { %>
-              <span class="mu" style="font-size:13px">บัญชีปัจจุบัน</span>
-            <% } %>
-          </td>
         </tr>
       <% }) %>
       <% if (!userList.length) { %>
-        <tr><td colspan="6" class="mu" style="text-align:center;padding:28px">ไม่พบผู้ใช้</td></tr>
+        <tr><td colspan="5" class="mu" style="text-align:center;padding:28px">ไม่พบผู้ใช้</td></tr>
       <% } %>
     </tbody>
   </table>

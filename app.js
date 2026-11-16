@@ -27,6 +27,16 @@ app.use(sessionMiddleware);
 app.use(flash);
 app.use(attachUser);
 
+// Admin accounts use the dedicated dashboard, not member pages.
+app.use((req, res, next) => {
+    if (req.user?.role === 'admin'
+        && !req.path.startsWith('/admin')
+        && !(req.method === 'POST' && req.path === '/auth/logout')) {
+        return res.redirect('/admin');
+    }
+    return next();
+});
+
 // View engine + layouts (ค่าเริ่มต้น layouts/main, หน้า auth ระบุ layouts/auth เอง)
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -41,7 +51,6 @@ app.use('/leader', require('./routes/leader.routes'));
 app.use('/favorites', require('./routes/favorite.routes'));
 app.use('/notifications', require('./routes/notification.routes'));
 app.use('/teams', require('./routes/team.routes'));
-app.use('/categories', require('./routes/category.routes'));
 app.use('/application', require('./routes/application.routes'));
 app.use('/admin', require('./routes/admin.routes'));
 

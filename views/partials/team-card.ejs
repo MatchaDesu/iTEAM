@@ -11,8 +11,23 @@
   const favoriteReturnTo = locals.favoriteReturnTo || '/teams';
 %>
 
-<div class="card">
-  <div style="display:flex;justify-content:space-between;gap:8px">
+<div class="card team-card">
+  <% if (locals.user) { %>
+    <form class="team-card-favorite" method="post" action="/favorites/<%= teamId %>/<%= isFavorite ? 'remove' : 'save' %>">
+      <input type="hidden" name="returnTo" value="<%= favoriteReturnTo %>">
+      <button
+        type="submit"
+        class="team-favorite-btn <%= isFavorite ? 'is-favorite' : '' %>"
+        aria-label="<%= isFavorite ? 'นำออกจากทีมโปรด' : 'บันทึกเป็นทีมโปรด' %>"
+        title="<%= isFavorite ? 'นำออกจากทีมโปรด' : 'บันทึกเป็นทีมโปรด' %>">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path class="flag-pole" d="M5 21V4"></path>
+          <path class="flag-shape" d="M6 5c4-2 8 3 13 0v10c-5 3-9-2-13 0z"></path>
+        </svg>
+      </button>
+    </form>
+  <% } %>
+  <div style="display:flex;justify-content:space-between;gap:8px;padding-right:<%= locals.user ? '38px' : '0' %>">
     <div>
       <span class="tag"><%= teamCat %></span>
       <h3><%= teamName %></h3>
@@ -34,10 +49,4 @@
     </span>
     <a class="btn sm" href="/teams/<%= teamId %>">ดูรายละเอียด</a>
   </div>
-  <% if (locals.user) { %>
-    <form method="post" action="/favorites/<%= teamId %>/<%= isFavorite ? 'remove' : 'save' %>" style="margin-top:10px">
-      <input type="hidden" name="returnTo" value="<%= favoriteReturnTo %>">
-      <button type="submit" class="btn sec sm"><%= isFavorite ? '♥ นำออกจากทีมโปรด' : '♡ บันทึกทีมโปรด' %></button>
-    </form>
-  <% } %>
 </div>

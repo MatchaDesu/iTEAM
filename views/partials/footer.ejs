@@ -1,5 +1,9 @@
-<footer class="foot"><a href="/">หน้าแรก</a> · <a href="/guide">คู่มือการใช้งาน</a> · <a
-        href="/about">เกี่ยวกับเรา</a><br>© iTEAM· หาทีมที่ใช่ แล้วลงมือทำด้วยกัน</footer>
+<footer class="foot">
+    <% if (locals.user?.role !== 'admin') { %>
+        <a href="/">หน้าแรก</a> · <a href="/guide">คู่มือการใช้งาน</a> · <a href="/about">เกี่ยวกับเรา</a><br>
+    <% } %>
+    © iTEAM· หาทีมที่ใช่ แล้วลงมือทำด้วยกัน
+</footer>
 <% if (locals.flash) { %>
     <div class="toast" role="status" id="toast">
         <%= flash %>

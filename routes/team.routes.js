@@ -10,6 +10,7 @@ router.get('/', team.getAll);
 router.post('/', authenticate, team.create);
 
 // Team Detail
+router.get('/:teamId/apply', authenticate, team.newApplicationPage);
 router.get('/:teamId', team.getById);
 
 // Redirect legacy team application links to the EJS management page.

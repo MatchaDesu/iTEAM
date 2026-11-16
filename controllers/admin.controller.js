@@ -3,8 +3,6 @@ const teamModel = require('../models/teamModel');
 const categoryModel = require('../models/categoryModel');
 const { parseId } = require('../utils/currentUser');
 
-const ROLES = ['member', 'admin'];
-
 // GET /admin
 exports.dashboard = async (req, res) => {
     try {
@@ -64,45 +62,29 @@ exports.deleteTeam = async (req, res) => {
     }
 };
 
-exports.getCategories = async (req, res) => {
+exports.updateTeamCategory = async (req, res) => {
+    const teamId = parseId(req.params.teamId);
+    const rawCategoryId = req.body?.category_id;
+    const categoryId = rawCategoryId ? parseId(rawCategoryId) : null;
+    if (!teamId || (rawCategoryId && !categoryId)) {
+        req.flash('ทีม/หมวดหมู่ไม่ถูกต้อง');
+        return res.redirect('/admin/teams');
+    }
     try {
-        const categories = await categoryModel.getAll();
-        return res.render('admin/categories', { categories });
-    } catch (err) {
-        console.error('admin getCategories error:', err);
-        return res.status(500).send('เกิดข้อผิดพลาดของเซิร์ฟเวอร์');
-    }
-};
-
-exports.updateRole = async (req, res) => {
-    const targetId = parseId(req.params.userId);
-    const role = req.body?.role;
-
-    if (!targetId) {
-        req.flash('ผู้ใช้ไม่ถูกต้อง');
-        return res.redirect('/admin/users');
-    }
-    if (!ROLES.includes(role)) {
-        req.flash('บทบาทไม่ถูกต้อง');
-        return res.redirect('/admin/users');
-    }
-    // กัน admin ลดสิทธิ์ตัวเองจนระบบไม่เหลือ admin
-    if (targetId === req.user.user_id) {
-        req.flash('ไม่สามารถเปลี่ยนบทบาทของตัวเองได้');
-        return res.redirect('/admin/users');
-    }
-
-    try {
-        const { changes } = await adminModel.setUserRole(targetId, role);
-        if (!changes) {
-            req.flash('ไม่พบผู้ใช้');
-            return res.redirect('/admin/users');
+        if (categoryId && !(await categoryModel.getById(categoryId))) {
+            req.flash('ไม่พบหมวดหมู่ที่ระบุ');
+            return res.redirect('/admin/teams');
         }
-        req.flash('เปลี่ยนบทบาทสำเร็จ');
-        return res.redirect('/admin/users');
+        const { changes } = await teamModel.updateCategory(teamId, categoryId);
+        if (!changes) {
+            req.flash('ไม่พบทีม');
+            return res.redirect('/admin/teams');
+        }
+        req.flash('อัปเดตหมวดหมู่ทีมแล้ว');
+        return res.redirect('/admin/teams');
     } catch (err) {
-        console.error('updateRole error:', err);
-        req.flash('เปลี่ยนบทบาทไม่สำเร็จ');
-        return res.redirect('/admin/users');
+        console.error('updateTeamCategory error:', err);
+        req.flash('อัปเดตหมวดหมู่ทีมไม่สำเร็จ');
+        return res.redirect('/admin/teams');
     }
 };

@@ -53,7 +53,6 @@
     || (curUserId ? mockApps.find(a => String(a.team) === String(tId) && String(a.user) === String(curUserId)) : null);
 
   const canApply = Boolean(curUser && !isLeader && !isMember && !myApp && tStatus === 'open' && memberList.length < tMax);
-  const applyAction = locals.applyUrl || `/teams/${tId}/apply`;
   const loginUrl = isMock ? '/login' : '/auth/login';
 %>
 
@@ -103,7 +102,7 @@
           <% } else if (myApp) { %>
             <button type="button" class="btn sec" style="justify-content:center;cursor:default" disabled>ส่งคำขอแล้ว</button>
           <% } else if (canApply) { %>
-            <a class="btn" style="justify-content:center" href="#applySection" onclick="focusApplyForm(event)">ส่งคำขอ</a>
+            <a class="btn" style="justify-content:center" href="/teams/<%= tId %>/apply">ส่งคำขอ</a>
           <% } else { %>
             <button type="button" class="btn sec" style="justify-content:center;cursor:not-allowed" disabled>ปิดรับสมัคร</button>
           <% } %>
@@ -126,43 +125,7 @@
     </div>
   </div>
 
-  <!-- 2. กล่องส่งคำขอเข้าร่วมทีม -->
-  <% if (!isLeader && !isMember) { %>
-    <div id="applySection" class="card">
-      <h2 style="margin:0">ส่งคำขอเข้าร่วมทีม</h2>
-
-      <% if (!curUser) { %>
-        <div class="mu">
-          กรุณา <a href="<%= loginUrl %>">เข้าสู่ระบบ</a> เพื่อส่งคำขอเข้าร่วมทีมนี้
-        </div>
-      <% } else if (myApp) { %>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span class="mu">คุณได้ส่งคำขอเข้าร่วมทีมนี้แล้ว สถานะปัจจุบัน:</span>
-          <span class="st <%= myApp.status === 'approved' ? 'accepted' : myApp.status %>">
-            <%= myApp.status === 'pending' ? 'รอพิจารณา' : (myApp.status === 'rejected' ? 'ไม่ผ่าน' : 'ได้รับการตอบรับ') %>
-          </span>
-        </div>
-      <% } else if (!canApply) { %>
-        <div class="mu">ทีมนี้ปิดรับสมัครหรือมีสมาชิกครบจำนวนแล้ว</div>
-      <% } else { %>
-        <form method="post" action="<%= applyAction %>">
-          <input type="hidden" name="team_id" value="<%= tId %>">
-          <label for="applyMsg" style="margin-top:0">ข้อความแนะนำตัวถึงหัวหน้าทีม</label>
-          <textarea
-            id="applyMsg"
-            name="message"
-            rows="3"
-            placeholder="แนะนำทักษะ ความถนัด หรือเหตุผลที่อยากเข้าร่วมทีมนี้..."
-            required></textarea>
-          <div style="margin-top:12px">
-            <button type="submit" class="btn">ส่งคำขอ</button>
-          </div>
-        </form>
-      <% } %>
-    </div>
-  <% } %>
-
-  <!-- 3. รายชื่อสมาชิกในทีม -->
+  <!-- 2. รายชื่อสมาชิกในทีม -->
   <div class="card">
     <h2 style="margin:0">
       สมาชิกในทีม
@@ -202,14 +165,3 @@
   </div>
 </div>
 
-<script>
-  function focusApplyForm(e) {
-    const section = document.getElementById('applySection');
-    const input = document.getElementById('applyMsg');
-    if (section) {
-      e.preventDefault();
-      section.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      if (input) setTimeout(() => input.focus(), 250);
-    }
-  }
-</script>
