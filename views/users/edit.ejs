@@ -10,6 +10,12 @@
     valFirst = parts[0] || '';
     valLast = parts.slice(1).join(' ');
   }
+  const avatarName = `${valFirst} ${valLast}`.trim() || u.username || u.name || 'ผู้ใช้';
+  const avatarInitial = Array.from(avatarName)[0].toUpperCase();
+  const rawAvatar = u.profile_image || '';
+  const isDefaultAvatar = !rawAvatar
+    || rawAvatar.includes('profile-anonymous')
+    || rawAvatar.includes('profile_anonymous');
 
   // แปลงทักษะเดิมเป็น Array เพื่อแสดงเป็นป้ายแท็กทันทีที่เปิดหน้าแก้ไข
   const initialSkills = Array.isArray(u.skills)
@@ -21,18 +27,26 @@
 
 <div class="profile-edit-wrap">
 <h2>แก้ไขโปรไฟล์</h2>
+<form id="editProfileForm" class="card" method="post" action="/profile" enctype="multipart/form-data">
 <section class="card profile-avatar-edit">
   <h3>รูปโปรไฟล์</h3>
-  <% if (u.profile_image) { %>
-    <img class="pf-avatar-img" src="<%= u.profile_image %>" alt="รูปโปรไฟล์ปัจจุบัน">
-  <% } %>
-  <form method="post" action="/profile/avatar" enctype="multipart/form-data">
-    <label for="profile_image">เลือกรูป JPG, PNG หรือ WebP (ไม่เกิน 5 MB)</label>
-    <input id="profile_image" name="profile_image" type="file" accept="image/jpeg,image/png,image/webp" required>
-    <button class="btn" type="submit">อัปโหลดรูป</button>
-  </form>
+  <div class="profile-avatar-picker">
+    <input class="profile-avatar-input" id="profile_image" name="profile_image" type="file"
+           accept="image/jpeg,image/png,image/webp">
+    <label class="profile-avatar-trigger" for="profile_image" title="เปลี่ยนรูปโปรไฟล์">
+    <% if (!isDefaultAvatar) { %>
+      <img class="pf-avatar-img" id="profileAvatarPreview" src="<%= rawAvatar %>" alt="รูปโปรไฟล์ปัจจุบัน"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="pf-avatar-initial" id="profileAvatarInitial" style="display:none"><%= avatarInitial %></span>
+    <% } else { %>
+      <img class="pf-avatar-img" id="profileAvatarPreview" src="" alt="รูปโปรไฟล์ใหม่" style="display:none">
+      <span class="pf-avatar-initial" id="profileAvatarInitial"><%= avatarInitial %></span>
+    <% } %>
+      <span class="profile-avatar-overlay">เปลี่ยนรูป</span>
+    </label>
+    <span id="profileImageFileName" class="mu">กดที่รูปเพื่อเลือกไฟล์ (JPG, PNG หรือ WebP ไม่เกิน 5 MB)</span>
+  </div>
 </section>
-<form id="editProfileForm" class="card" method="post" action="/profile">
   <label for="username">ชื่อผู้ใช้ (Username)</label>
   <input id="username" name="username" maxlength="30" value="<%= u.username || '' %>" required>
 
@@ -142,6 +156,24 @@
     if (skillInput.value.trim()) {
       addSkillFromInput();
     }
+  });
+
+  const profileImageInput = document.getElementById('profile_image');
+  const profileAvatarPreview = document.getElementById('profileAvatarPreview');
+  const profileAvatarInitial = document.getElementById('profileAvatarInitial');
+  const profileImageFileName = document.getElementById('profileImageFileName');
+  let previewUrl = null;
+
+  profileImageInput.addEventListener('change', () => {
+    const file = profileImageInput.files[0];
+    if (!file) return;
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(file);
+    profileAvatarPreview.src = previewUrl;
+    profileAvatarPreview.style.display = 'block';
+    profileAvatarInitial.style.display = 'none';
+    profileImageFileName.textContent = `${file.name} — กดบันทึกโปรไฟล์เพื่อยืนยันรูป`;
   });
 
   function escapeHtml(str) {

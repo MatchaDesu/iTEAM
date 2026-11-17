@@ -10,7 +10,6 @@ router.get('/about', pages.about);
 router.get('/guide', pages.guide);
 router.get('/profile', authenticate, user.getMyProfile);
 router.get('/profile/edit', authenticate, user.editMyProfile);
-router.post('/profile', authenticate, user.updateMyProfile);
-router.post('/profile/avatar', authenticate, profileImageUpload, user.updateProfileImage);
+router.post('/profile', authenticate, profileImageUpload, user.updateMyProfile);
 
 module.exports = router;
