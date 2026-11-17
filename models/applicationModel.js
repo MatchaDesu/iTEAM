@@ -95,7 +95,7 @@ exports.createApplication = async (application) => {
     try {
         await client.query('BEGIN');
         const teamResult = await client.query(
-            'SELECT status, max_members FROM teams WHERE team_id = $1 FOR UPDATE',
+            'SELECT status, max_members, created_by, team_name FROM teams WHERE team_id = $1 FOR UPDATE',
             [team_id]
         );
         const team = teamResult.rows[0];
@@ -135,6 +135,19 @@ exports.createApplication = async (application) => {
              VALUES ($1, $2, $3) RETURNING application_id`,
             [user_id, team_id, message]
         );
+
+        if (Number(team.created_by) !== Number(user_id)) {
+            await client.query(
+                `INSERT INTO notifications (user_id, type, message, link_url)
+                 VALUES ($1, 'application_received', $2, $3)`,
+                [
+                    team.created_by,
+                    `มีคำขอเข้าร่วมทีม "${team.team_name}"`,
+                    `/application/${created.rows[0].application_id}`
+                ]
+            );
+        }
+
         await client.query('COMMIT');
         return { application_id: created.rows[0].application_id };
     } catch (err) {
@@ -270,9 +283,14 @@ exports.reviewApplication = async (id, status, reviewed_by) => {
 
         const outcome = status === 'approved' ? 'ได้รับการอนุมัติ' : 'ถูกปฏิเสธ';
         await client.query(
-            `INSERT INTO notifications (user_id, type, message)
-             VALUES ($1, $2, $3)`,
-            [application.user_id, `application_${status}`, `คำขอเข้าร่วมทีม "${application.team_name}"${outcome}`]
+            `INSERT INTO notifications (user_id, type, message, link_url)
+             VALUES ($1, $2, $3, $4)`,
+            [
+                application.user_id,
+                `application_${status}`,
+                `คำขอเข้าร่วมทีม "${application.team_name}"${outcome}`,
+                `/application/${id}`
+            ]
         );
 
         await client.query('COMMIT');

@@ -411,6 +411,26 @@ a.btn.sec {
     overflow-wrap: anywhere;
 }
 
+.notification-toast {
+    top: calc(72px + env(safe-area-inset-top, 0px));
+    text-decoration: none;
+}
+
+.notification-toast:hover {
+    color: var(--sf);
+    filter: brightness(1.12);
+}
+
+.notification-item-link {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.notification-item-link:hover {
+    color: var(--bl);
+}
+
 .team-card {
     position: relative;
 }

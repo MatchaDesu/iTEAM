@@ -21,6 +21,17 @@
 
 <div class="profile-edit-wrap">
 <h2>แก้ไขโปรไฟล์</h2>
+<section class="card profile-avatar-edit">
+  <h3>รูปโปรไฟล์</h3>
+  <% if (u.profile_image) { %>
+    <img class="pf-avatar-img" src="<%= u.profile_image %>" alt="รูปโปรไฟล์ปัจจุบัน">
+  <% } %>
+  <form method="post" action="/profile/avatar" enctype="multipart/form-data">
+    <label for="profile_image">เลือกรูป JPG, PNG หรือ WebP (ไม่เกิน 5 MB)</label>
+    <input id="profile_image" name="profile_image" type="file" accept="image/jpeg,image/png,image/webp" required>
+    <button class="btn" type="submit">อัปโหลดรูป</button>
+  </form>
+</section>
 <form id="editProfileForm" class="card" method="post" action="/profile">
   <label for="username">ชื่อผู้ใช้ (Username)</label>
   <input id="username" name="username" maxlength="30" value="<%= u.username || '' %>" required>

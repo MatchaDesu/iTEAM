@@ -88,7 +88,6 @@
 
         <% if (isOwnProfile) { %>
           <div class="acts">
-            <a class="btn sec sm" href="/leader/teams/new">+ สร้างทีม</a>
             <a class="btn sm" href="/profile/edit">แก้ไขโปรไฟล์</a>
           </div>
         <% } %>
@@ -167,9 +166,6 @@
       <% } else { %>
         <div class="pf-empty-sub mu">
           ยังไม่ได้เป็นหัวหน้าทีมใด
-          <% if (isOwnProfile) { %>
-            • <a href="/leader/teams/new">สร้างทีมใหม่</a>
-          <% } %>
         </div>
       <% } %>
     </div>
