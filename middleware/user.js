@@ -11,12 +11,12 @@ exports.attachUser = async (req, res, next) => {
     if (!sessionUser) return next();
 
     try {
-        const [user, unread] = await Promise.all([
+        const [user, notificationSummary] = await Promise.all([
             userModel.getById(sessionUser.user_id),
-            notificationModel.getUnreadCount(sessionUser.user_id).catch((notificationErr) => {
+            notificationModel.getSummary(sessionUser.user_id).catch((notificationErr) => {
                 // Keep the page available even if the badge count query fails.
                 console.error('load unread notifications error:', notificationErr);
-                return 0;
+                return { unreadCount: 0, latestId: 0 };
             })
         ]);
 
@@ -28,7 +28,8 @@ exports.attachUser = async (req, res, next) => {
 
         req.user = { user_id: user.user_id, role: user.role };
         res.locals.user = user;
-        res.locals.unread = unread;
+        res.locals.unread = notificationSummary.unreadCount;
+        res.locals.notificationCursor = notificationSummary.latestId;
         return next();
     } catch (err) {
         return next(err);

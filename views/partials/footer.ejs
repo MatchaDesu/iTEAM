@@ -10,6 +10,9 @@
     </div>
     <script>setTimeout(() => document.getElementById('toast')?.remove(), 2500)</script>
 <% } %>
+<% if (locals.user && locals.user.role !== 'admin') { %>
+    <script defer src="/js/notifications.js" data-since="<%= Number(locals.notificationCursor || 0) %>"></script>
+<% } %>
 </body>
 
 </html>

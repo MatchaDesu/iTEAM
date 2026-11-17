@@ -79,13 +79,13 @@ exports.updateProfile = (id, path) => {
 /* อัปเดตข้อมูลผู้ใช้ */
 exports.updateUserInfo = (id, data) => {
     return new Promise((resolve, reject) => {
-        const { username, first_name, last_name, email, github, phone, skills, bio } = data;
+        const { username, first_name, last_name, email, github, phone, skills, bio, profile_image } = data;
         const sql = `UPDATE users
                      SET username = $1, first_name = $2, last_name = $3, email = $4, github = NULLIF(BTRIM($5), ''), phone = $6,
-                         skills = $7, bio = $8
-                     WHERE user_id = $9 AND deleted_at IS NULL`;
+                         skills = $7, bio = $8, profile_image = COALESCE($9, profile_image)
+                     WHERE user_id = $10 AND deleted_at IS NULL`;
 
-        db.query(sql, [username, first_name, last_name, email, github, phone, skills, bio, id], (err, result) => {
+        db.query(sql, [username, first_name, last_name, email, github, phone, skills, bio, profile_image || null, id], (err, result) => {
             if (err) return reject(err);
             resolve({ changes: result.rowCount });
         });

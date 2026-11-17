@@ -129,6 +129,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     user_id INTEGER NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
     type TEXT NOT NULL,
     message TEXT NOT NULL,
+    link_url TEXT,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
