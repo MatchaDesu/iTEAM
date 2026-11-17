@@ -1,7 +1,7 @@
 <%
   const userList = Array.isArray(locals.users) ? locals.users : [];
   const qText = locals.q || '';
-  const roleFilter = locals.role || locals.f || '';
+  const roleFilter = locals.role || '';
 %>
 <h2>จัดการผู้ใช้</h2>
 <form class="tools" method="get" action="/admin/users">
@@ -14,6 +14,11 @@
 </form>
 
 <div class="tw">
+  <style>
+    .admin-user-row { cursor: pointer; }
+    .admin-user-row:hover { background: rgba(37, 99, 235, .06); }
+    .admin-user-row:focus-visible { outline: 2px solid var(--bl); outline-offset: -2px; }
+  </style>
   <table class="tb">
     <thead>
       <tr>
@@ -26,10 +31,10 @@
     </thead>
     <tbody>
       <% userList.forEach(u => {
-        const fullName = u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : (u.name || '-');
+        const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || '-';
       %>
-        <tr>
-          <td><b><%= fullName %></b></td>
+        <tr class="admin-user-row" data-user-url="/users/<%= u.user_id %>" tabindex="0" aria-label="ดูรายละเอียดผู้ใช้ <%= fullName %>">
+          <td><b><a href="/users/<%= u.user_id %>" style="text-decoration:none;color:inherit"><%= fullName %></a></b></td>
           <td class="mu"><%= u.username ? '@' + u.username : '-' %></td>
           <td class="mu"><%= u.email %></td>
           <td class="mu"><%= u.phone || '-' %></td>
@@ -46,3 +51,19 @@
     </tbody>
   </table>
 </div>
+
+<script>
+  document.querySelectorAll('.admin-user-row').forEach(row => {
+    const openProfile = event => {
+      if (event.target.closest('a, button, form, input, select, textarea')) return;
+      window.location.href = row.dataset.userUrl;
+    };
+    row.addEventListener('click', openProfile);
+    row.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        window.location.href = row.dataset.userUrl;
+      }
+    });
+  });
+</script>

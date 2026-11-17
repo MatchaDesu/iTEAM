@@ -1,7 +1,7 @@
 <%
   const queryText = locals.q || '';
   const selectedCat = locals.cat || '';
-  const catList = locals.categories || locals.cats || [];
+  const catList = locals.categories || [];
   const teamList = Array.isArray(locals.teams) ? locals.teams : [];
 %>
 
@@ -18,8 +18,8 @@
 <div class="chips">
   <a class="chip <%= !selectedCat ? 'on' : '' %>" href="/teams?q=<%= encodeURIComponent(queryText) %>">ทั้งหมด</a>
   <% catList.forEach(c => {
-    const cVal = typeof c === 'object' ? c.category_id : c;
-    const cName = typeof c === 'object' ? c.category_name : c;
+    const cVal = c.category_id;
+    const cName = c.category_name;
     const isActive = String(selectedCat) === String(cVal) || String(selectedCat) === String(cName);
   %>
     <a class="chip <%= isActive ? 'on' : '' %>"

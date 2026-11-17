@@ -3,6 +3,8 @@ const teamModel = require('../models/teamModel');
 const categoryModel = require('../models/categoryModel');
 const { parseId } = require('../utils/currentUser');
 
+const ROLES = ['member', 'admin'];
+
 // GET /admin
 exports.dashboard = async (req, res) => {
     try {

@@ -1,10 +1,9 @@
 <%
-  const rawTeam = locals.t || {};
-  const valName = rawTeam.team_name ?? rawTeam.name ?? '';
-  const valDesc = rawTeam.description ?? rawTeam.desc ?? '';
+  const rawTeam = locals.team || {};
+  const valName = rawTeam.team_name || '';
+  const valDesc = rawTeam.description || '';
   const valCatId = rawTeam.category_id ?? '';
-  const valCatName = rawTeam.category_name ?? rawTeam.cat ?? '';
-  const catList = locals.categories || locals.cats || [];
+  const catList = locals.categories || [];
 %>
 
 <label for="team_name">ชื่อทีม</label>
@@ -14,9 +13,9 @@
 <select id="category_id" name="category_id">
   <option value="">-- ไม่ระบุหมวดหมู่ --</option>
   <% catList.forEach(c => {
-    const cId = typeof c === 'object' ? c.category_id : c;
-    const cName = typeof c === 'object' ? c.category_name : c;
-    const isSel = (valCatId && String(cId) === String(valCatId)) || (valCatName && cName === valCatName);
+    const cId = c.category_id;
+    const cName = c.category_name;
+    const isSel = valCatId && String(cId) === String(valCatId);
   %>
     <option value="<%= cId %>" <%= isSel ? 'selected' : '' %>><%= cName %></option>
   <% }) %>

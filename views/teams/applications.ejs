@@ -1,21 +1,16 @@
 <%
-  const appList = locals.applications || locals.apps || [];
-  const mockTeams = Array.isArray(locals.db?.teams) ? locals.db.teams : [];
-  const statusMap = Object.assign(
-    { pending: 'รอพิจารณา', approved: 'ได้รับการตอบรับ', accepted: 'ได้รับการตอบรับ', rejected: 'ไม่ผ่าน' },
-    locals.ST || {}
-  );
+  const appList = locals.applications || [];
+  const statusMap = { pending: 'รอพิจารณา', approved: 'ได้รับการตอบรับ', accepted: 'ได้รับการตอบรับ', rejected: 'ไม่ผ่าน' };
 %>
 
 <h2>ใบสมัครของฉัน</h2>
 <% if (appList.length) { %>
   <div class="stack">
     <% appList.forEach(a => {
-      const appId = a.application_id ?? a.id;
-      const tId = a.team_id ?? a.team;
-      const foundTeam = mockTeams.find(x => x.id === tId);
-      const tName = a.team_name ?? foundTeam?.name ?? 'ไม่พบชื่อทีม';
-      const msgText = a.message ?? a.msg ?? '';
+      const appId = a.application_id;
+      const tId = a.team_id;
+      const tName = a.team_name || 'ไม่พบชื่อทีม';
+      const msgText = a.message || '';
       const badgeClass = a.status === 'approved' ? 'accepted' : a.status;
     %>
       <div class="card row app-card">

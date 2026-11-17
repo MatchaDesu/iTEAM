@@ -1,11 +1,5 @@
 <%
-  const s = locals.stats || {};
-  const mockDb = locals.db || { users: [], teams: [], apps: [] };
-  const totalUsers = s.total_users ?? mockDb.users.length;
-  const totalAdmins = s.total_admins ?? mockDb.users.filter(u => u.role === 'admin').length;
-  const totalTeams = s.total_teams ?? mockDb.teams.length;
-  const totalCats = s.total_categories ?? (locals.categories || locals.cats || []).length;
-  const pendingApps = s.pending_applications ?? mockDb.apps.filter(a => a.status === 'pending').length;
+  const s = locals.stats;
 
   const stat = (n, l, c) => `<div class="card">
     <div class="mu" style="font-size:14px">${l}</div>
@@ -15,9 +9,8 @@
 
 <h2>ภาพรวมระบบ</h2>
 <div class="stats">
-  <%- stat(totalUsers, 'ผู้ใช้ทั้งหมด') %>
-  <%- stat(totalAdmins, 'ผู้ดูแลระบบ', '--wa') %>
-  <%- stat(totalTeams, 'ทีมทั้งหมด') %>
-  <%- stat(totalCats, 'หมวดหมู่ทั้งหมด') %>
-  <%- stat(pendingApps, 'ใบสมัครรอพิจารณา', '--ok') %>
+  <%- stat(s.total_users, 'ผู้ใช้ทั้งหมด') %>
+  <%- stat(s.total_admins, 'ผู้ดูแลระบบ', '--wa') %>
+  <%- stat(s.total_teams, 'ทีมทั้งหมด') %>
+  <%- stat(s.total_categories, 'หมวดหมู่ทั้งหมด') %>
 </div>

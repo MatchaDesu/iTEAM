@@ -1,11 +1,11 @@
 <%
-  const teamId = t.team_id ?? t.id;
-  const teamName = t.team_name ?? t.name ?? '';
-  const teamCat = t.category_name ?? t.cat ?? 'ทั่วไป';
-  const teamDesc = t.description ?? t.desc ?? '';
+  const teamId = t.team_id;
+  const teamName = t.team_name || '';
+  const teamCat = t.category_name || 'ทั่วไป';
+  const teamDesc = t.description || '';
   const teamRoles = Array.isArray(t.roles) ? t.roles : [];
-  const memberCount = Array.isArray(t.members) ? t.members.length : (t.member_count ?? null);
-  const teamMax = t.max_members ?? t.max ?? null;
+  const memberCount = t.member_count ?? null;
+  const teamMax = t.max_members ?? null;
   const favoriteTeamIds = locals.favoriteTeamIds || [];
   const isFavorite = favoriteTeamIds.some(id => String(id) === String(teamId));
   const favoriteReturnTo = locals.favoriteReturnTo || '/teams';

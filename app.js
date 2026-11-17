@@ -31,6 +31,8 @@ app.use(attachUser);
 app.use((req, res, next) => {
     if (req.user?.role === 'admin'
         && !req.path.startsWith('/admin')
+        && !(req.method === 'GET' && /^\/teams\/\d+$/.test(req.path))
+        && !(req.method === 'GET' && /^\/users\/\d+$/.test(req.path))
         && !(req.method === 'POST' && req.path === '/auth/logout')) {
         return res.redirect('/admin');
     }

@@ -4,7 +4,7 @@ const db = require('../config/db');
 exports.getMembersByTeamId = (team_id) => {
   return new Promise((resolve, reject) => {
     const sql = `SELECT tm.team_id, tm.user_id, tm.team_role, tm.joined_at,
-                        u.username, u.first_name, u.last_name, u.profile_image
+                        u.username, u.first_name, u.last_name, u.profile_image, u.skills
                  FROM team_members tm
                  JOIN users u ON tm.user_id = u.user_id
                  WHERE tm.team_id = $1 AND u.deleted_at IS NULL`;
@@ -21,9 +21,10 @@ exports.getMembersByTeamId = (team_id) => {
 exports.getTeamsByUserId = (user_id) => {
   return new Promise((resolve, reject) => {
     const sql = `SELECT tm.team_id, tm.user_id, tm.team_role, tm.joined_at,
-                        t.team_name, t.description, t.category_id
+                        t.team_name, t.description, t.category_id, c.category_name
                  FROM team_members tm
                  JOIN teams t ON tm.team_id = t.team_id
+                 LEFT JOIN categories c ON t.category_id = c.category_id
                  JOIN users u ON tm.user_id = u.user_id AND u.deleted_at IS NULL
                  WHERE tm.user_id = $1`;
 

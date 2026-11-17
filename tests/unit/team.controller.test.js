@@ -6,7 +6,8 @@ jest.mock('../../models/teamMemberModel', () => ({
     getTeamsByUserId: jest.fn(), getMembersByTeamId: jest.fn(), checkMember: jest.fn(), removeMember: jest.fn()
 }));
 jest.mock('../../models/applicationModel', () => ({
-    checkPendingApplication: jest.fn(), createApplication: jest.fn(), getByTeamId: jest.fn()
+    checkPendingApplication: jest.fn(), createApplication: jest.fn(), getByTeamId: jest.fn(),
+    getLatestByUserAndTeam: jest.fn()
 }));
 jest.mock('../../models/categoryModel', () => ({ getAll: jest.fn(), getById: jest.fn() }));
 jest.mock('../../models/userModel', () => ({ getAll: jest.fn() }));
@@ -41,6 +42,7 @@ beforeEach(() => {
     memberModel.getMembersByTeamId.mockResolvedValue([]);
     memberModel.checkMember.mockResolvedValue(null);
     applicationModel.checkPendingApplication.mockResolvedValue(null);
+    applicationModel.getLatestByUserAndTeam.mockResolvedValue(null);
     applicationModel.getByTeamId.mockResolvedValue([]);
     teamModel.createTeamWithLeader.mockResolvedValue({ team_id: 5 });
     isTeamLeader.mockResolvedValue(true);
@@ -97,11 +99,11 @@ describe('team.getById', () => {
     });
     test('loads current user application and favorite state', async () => {
         const application = { status: 'pending' };
-        applicationModel.checkPendingApplication.mockResolvedValue(application);
+        applicationModel.getLatestByUserAndTeam.mockResolvedValue(application);
         favoriteModel.isFavorite.mockResolvedValue(true);
         const res = makeRes();
         await team.getById(makeReq({ params: { teamId: '5' } }), res);
-        expect(applicationModel.checkPendingApplication).toHaveBeenCalledWith(7, 5);
+        expect(applicationModel.getLatestByUserAndTeam).toHaveBeenCalledWith(7, 5);
         expect(favoriteModel.isFavorite).toHaveBeenCalledWith(7, 5);
         expect(res.render).toHaveBeenCalledWith('teams/detail', expect.objectContaining({ myApplication: application, isFavorite: true }));
     });
@@ -304,22 +306,22 @@ describe('leader team pages/actions', () => {
         await team.updateMyTeam(req, res);
         expect(res.redirect).toHaveBeenCalledWith('/leader/teams?team=5&tab=mem');
 
-        req = makeReq({ params: { teamId: '5' }, body: { team_name: ' T ', description: ' D ', category_id: '' } });
+        req = makeReq({ params: { teamId: '5' }, body: { team_name: ' T ', description: ' D ', category_id: '', status: 'open' } });
         res = makeRes();
         await team.updateMyTeam(req, res);
-        expect(teamModel.updateTeam).toHaveBeenCalledWith(5, { team_name: 'T', description: 'D', category_id: null });
+        expect(teamModel.updateTeam).toHaveBeenCalledWith(5, { team_name: 'T', description: 'D', category_id: null, status: 'open' });
         expect(res.redirect).toHaveBeenCalledWith('/leader/teams?team=5&tab=info');
     });
     test('rejects unknown category and handles update errors', async () => {
         categoryModel.getById.mockResolvedValue(null);
-        let req = makeReq({ params: { teamId: '5' }, body: { team_name: 'T', description: 'D', category_id: '99' } });
+        let req = makeReq({ params: { teamId: '5' }, body: { team_name: 'T', description: 'D', category_id: '99', status: 'open' } });
         let res = makeRes();
         await team.updateMyTeam(req, res);
         expect(req.flash).toHaveBeenCalledWith('ไม่พบหมวดหมู่ที่ระบุ');
 
         teamModel.updateTeam.mockRejectedValue(new Error('db'));
         jest.spyOn(console, 'error').mockImplementation(() => {});
-        req = makeReq({ params: { teamId: '5' }, body: { team_name: 'T', description: 'D' } });
+        req = makeReq({ params: { teamId: '5' }, body: { team_name: 'T', description: 'D', status: 'open' } });
         res = makeRes();
         await team.updateMyTeam(req, res);
         expect(req.flash).toHaveBeenCalledWith('บันทึกข้อมูลทีมไม่สำเร็จ');

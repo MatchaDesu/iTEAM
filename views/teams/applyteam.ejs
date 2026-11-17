@@ -1,43 +1,38 @@
 <%
-  const isMock = Boolean(locals.db);
-  const t = locals.team || locals.t || {};
-  const tId = t.team_id ?? t.id;
-  const tName = t.team_name ?? t.name ?? 'ไม่ระบุชื่อทีม';
-  const tCat = t.category_name ?? t.cat ?? '';
-  const tDesc = t.description ?? t.desc ?? '';
-  const tMax = Number(t.max_members ?? t.max ?? 5);
+  const t = locals.team;
+  const tId = t.team_id;
+  const tName = t.team_name || 'ไม่ระบุชื่อทีม';
+  const tCat = t.category_name || '';
+  const tDesc = t.description || '';
+  const tMax = Number(t.max_members ?? 5);
   const tStatus = t.status || 'open';
-  const leaderId = t.created_by ?? t.leader ?? null;
+  const leaderId = t.created_by ?? null;
 
   const curUser = locals.user || null;
-  const curUserId = curUser ? (curUser.user_id ?? curUser.id) : null;
+  const curUserId = curUser?.user_id ?? null;
   const isLeader = Boolean(curUserId && leaderId && String(curUserId) === String(leaderId));
 
-  const rawMembers = Array.isArray(locals.members)
-    ? locals.members
-    : (Array.isArray(t.members) ? t.members : []);
+  const rawMembers = Array.isArray(locals.members) ? locals.members : [];
 
   const memberCount = rawMembers.length;
   const isMember = Boolean(
     curUserId && rawMembers.some(m => {
-      const mId = (m && typeof m === 'object') ? (m.user_id ?? m.id) : m;
+      const mId = m.user_id;
       return String(mId) === String(curUserId);
     })
   );
 
-  const mockApps = Array.isArray(locals.db?.apps) ? locals.db.apps : [];
-  const myApp = locals.myApplication
-    || (curUserId ? mockApps.find(a => String(a.team) === String(tId) && String(a.user) === String(curUserId)) : null);
+  const myApp = locals.myApplication || null;
   const appStatus = (myApp && typeof myApp === 'object' && myApp.status)
     ? myApp.status
     : (myApp ? 'pending' : null);
 
   const isClosed = tStatus !== 'open' || (memberCount > 0 && memberCount >= tMax);
-  const applyAction = locals.applyUrl || `/teams/${tId}/apply`;
-  const loginUrl = isMock ? '/login' : '/auth/login';
+  const applyAction = `/teams/${tId}/apply`;
+  const loginUrl = '/auth/login';
 
   const userFullName = curUser
-    ? (curUser.first_name ? `${curUser.first_name} ${curUser.last_name || ''}`.trim() : (curUser.name || curUser.username || 'ผู้ใช้งาน'))
+    ? (`${curUser.first_name || ''} ${curUser.last_name || ''}`.trim() || curUser.username || 'ผู้ใช้งาน')
     : '';
   const userSkills = curUser && curUser.skills
     ? String(curUser.skills).split(',').map(s => s.trim()).filter(Boolean)
@@ -104,7 +99,7 @@
         </span>
       </p>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-        <a class="btn" href="<%= isMock ? '/applications' : '/application' %>">ดูใบสมัครของฉัน</a>
+        <a class="btn" href="/application">ดูใบสมัครของฉัน</a>
         <a class="btn sec" href="/teams/<%= tId %>">กลับไปหน้าทีม</a>
       </div>
     </div>

@@ -1,12 +1,10 @@
 <%
-  // ===== Data Adapter: รองรับทั้ง preview.js และ PostgreSQL (app.js) =====
-  const isMock = Boolean(locals.db);
   const curUser = locals.user || null;
 
   // ถ้าล็อกอินแล้วให้พาไปหน้าค้นหาทีม ถ้ายังไม่ล็อกอินให้พาไปหน้าสมัครสมาชิก
   const startUrl = curUser
     ? '/teams'
-    : (isMock ? '/register' : '/auth/signup');
+    : '/auth/signup';
 
   const pillars = [
     {

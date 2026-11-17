@@ -57,6 +57,10 @@ exports.getById = async (req, res) => {
 
 // GET /teams/:teamId/apply
 exports.newApplicationPage = async (req, res) => {
+    if (req.user?.role === 'admin') {
+        req.flash('บัญชีผู้ดูแลระบบไม่สามารถส่งคำขอเข้าทีมได้');
+        return res.redirect('/admin');
+    }
     const teamId = parseId(req.params.teamId);
     if (!teamId) return res.status(400).send('ไม่พบทีม');
 
@@ -92,6 +96,10 @@ exports.newApplicationPage = async (req, res) => {
 
 // POST /teams/:teamId/apply
 exports.apply = async (req, res) => {
+    if (req.user?.role === 'admin') {
+        req.flash('บัญชีผู้ดูแลระบบไม่สามารถส่งคำขอเข้าทีมได้');
+        return res.redirect('/admin');
+    }
     const teamId = parseId(req.params.teamId);
     const userId = req.user?.user_id;
     const message = req.body?.message?.trim() || null;

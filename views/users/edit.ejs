@@ -1,22 +1,10 @@
 <%
-  // ===== Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
-  const u = locals.user || {};
-
-  // กรณีรันใน preview.js ที่เก็บชื่อรวมใน u.name ให้แยกชื่อจริง-นามสกุลให้อัตโนมัติ
-  let valFirst = u.first_name || '';
-  let valLast = u.last_name || '';
-  if (!valFirst && u.name) {
-    const parts = u.name.trim().split(/\s+/);
-    valFirst = parts[0] || '';
-    valLast = parts.slice(1).join(' ');
-  }
+  const u = locals.user;
+  const valFirst = u.first_name || '';
+  const valLast = u.last_name || '';
 
   // แปลงทักษะเดิมเป็น Array เพื่อแสดงเป็นป้ายแท็กทันทีที่เปิดหน้าแก้ไข
-  const initialSkills = Array.isArray(u.skills)
-    ? u.skills
-    : (typeof u.skills === 'string' && u.skills.trim()
-        ? u.skills.split(',').map(s => s.trim()).filter(Boolean)
-        : []);
+  const initialSkills = Array.isArray(u.skills) ? u.skills : [];
 %>
 
 <div class="profile-edit-wrap">

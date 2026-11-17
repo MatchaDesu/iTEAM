@@ -1,44 +1,24 @@
 <%
-  // ===== Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
   const viewer = locals.user || null;
-  const viewerId = viewer ? (viewer.user_id ?? viewer.id) : null;
+  const viewerId = viewer?.user_id ?? null;
 
   // ข้อมูลเจ้าของโปรไฟล์ที่กำลังเปิดดู (แยกจาก locals.user ซึ่งเป็นคนล็อกอิน)
-  const target = locals.profileUser || locals.targetUser || locals.member || locals.u || {};
-  const targetId = target.user_id ?? target.id ?? null;
+  const target = locals.profileUser;
+  const targetId = target.user_id;
   const isSelf = Boolean(viewerId && targetId && String(viewerId) === String(targetId));
 
   const fullName = target.first_name
     ? `${target.first_name} ${target.last_name || ''}`.trim()
-    : (target.name || target.username || 'ผู้ใช้งาน');
+    : (target.username || 'ผู้ใช้งาน');
   const initialChar = fullName.charAt(0).toUpperCase();
 
   // แปลงรายการทักษะเป็น Array
-  const skillList = Array.isArray(target.skills)
-    ? target.skills
-    : (typeof target.skills === 'string' && target.skills.trim()
-        ? target.skills.split(',').map(s => s.trim()).filter(Boolean)
-        : []);
+  const skillList = Array.isArray(target.skills) ? target.skills : [];
 
   // แยกกลุ่มทีมที่เป็นหัวหน้าทีม และทีมที่เป็นสมาชิกของเจ้าของโปรไฟล์
-  const mockTeams = Array.isArray(locals.db?.teams) ? locals.db.teams : [];
-  let leaderTeams = [];
-  let memberTeams = [];
-
-  if (Array.isArray(locals.leaderTeams) || Array.isArray(locals.memberTeams)) {
-    leaderTeams = Array.isArray(locals.leaderTeams) ? locals.leaderTeams : [];
-    memberTeams = Array.isArray(locals.memberTeams) ? locals.memberTeams : [];
-  } else if (Array.isArray(locals.teams)) {
-    leaderTeams = locals.teams.filter(t => t.team_role === 'leader');
-    memberTeams = locals.teams.filter(t => t.team_role !== 'leader');
-  } else if (mockTeams.length && targetId !== null) {
-    leaderTeams = mockTeams.filter(t => String(t.leader) === String(targetId));
-    memberTeams = mockTeams.filter(
-      t => Array.isArray(t.members)
-        && t.members.some(m => String(m) === String(targetId))
-        && String(t.leader) !== String(targetId)
-    );
-  }
+  const teams = Array.isArray(locals.teams) ? locals.teams : [];
+  const leaderTeams = teams.filter(t => t.team_role === 'leader');
+  const memberTeams = teams.filter(t => t.team_role !== 'leader');
 %>
 
 <div class="pf-wrap">
@@ -124,10 +104,10 @@
       <% if (leaderTeams.length) { %>
         <div class="stack">
           <% leaderTeams.forEach(t => {
-            const tId = t.team_id ?? t.id;
-            const tName = t.team_name ?? t.name ?? '';
-            const tCat = t.category_name ?? t.cat ?? '';
-            const tDesc = t.description ?? t.desc ?? '';
+            const tId = t.team_id;
+            const tName = t.team_name || '';
+            const tCat = t.category_name || '';
+            const tDesc = t.description || '';
           %>
             <div class="pf-team-row">
               <a href="/teams/<%= tId %>" style="min-width:0;flex:1;text-decoration:none;color:inherit">
@@ -162,10 +142,10 @@
       <% if (memberTeams.length) { %>
         <div class="stack">
           <% memberTeams.forEach(t => {
-            const tId = t.team_id ?? t.id;
-            const tName = t.team_name ?? t.name ?? '';
-            const tCat = t.category_name ?? t.cat ?? '';
-            const tDesc = t.description ?? t.desc ?? '';
+            const tId = t.team_id;
+            const tName = t.team_name || '';
+            const tCat = t.category_name || '';
+            const tDesc = t.description || '';
           %>
             <div class="pf-team-row">
               <a href="/teams/<%= tId %>" style="min-width:0;flex:1;text-decoration:none;color:inherit">

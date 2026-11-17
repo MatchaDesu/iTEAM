@@ -1,60 +1,37 @@
 <%
-  // ===== 1. Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
-  const isMock = Boolean(locals.db);
-  const t = locals.team || locals.t || {};
-  const tId = t.team_id ?? t.id;
-  const tName = t.team_name ?? t.name ?? 'ไม่ระบุชื่อทีม';
-  const tCat = t.category_name ?? t.cat ?? '';
-  const tDesc = t.description ?? t.desc ?? '';
-  const tMax = Number(t.max_members ?? t.max ?? 5);
+  const t = locals.team;
+  const tId = t.team_id;
+  const tName = t.team_name || 'ไม่ระบุชื่อทีม';
+  const tCat = t.category_name || '';
+  const tDesc = t.description || '';
+  const tMax = Number(t.max_members ?? 5);
   const tStatus = t.status || 'open';
-  const leaderId = t.created_by ?? t.leader ?? null;
+  const leaderId = t.created_by ?? null;
 
   const curUser = locals.user || null;
-  const curUserId = curUser ? (curUser.user_id ?? curUser.id) : null;
+  const isAdmin = curUser?.role === 'admin';
+  const curUserId = curUser?.user_id ?? null;
   const isLeader = Boolean(curUserId && leaderId && String(curUserId) === String(leaderId));
 
-  // แปลงรายชื่อสมาชิกให้เป็นรูปแบบเดียวกันทั้งจาก PostgreSQL และ preview.js
-  const mockUsers = Array.isArray(locals.db?.users) ? locals.db.users : [];
-  const rawMembers = Array.isArray(locals.members)
-    ? locals.members
-    : (Array.isArray(t.members) ? t.members : []);
-
-  const memberList = rawMembers.map(m => {
-    if (m && typeof m === 'object') {
-      const fullName = m.first_name
-        ? `${m.first_name} ${m.last_name || ''}`.trim()
-        : (m.name || m.username || 'สมาชิก');
-      return {
-        id: m.user_id ?? m.id,
-        name: fullName,
-        username: m.username || '',
-        skills: m.skills || '',
-        role: m.team_role || (String(m.user_id ?? m.id) === String(leaderId) ? 'leader' : 'member')
-      };
-    }
-    const found = mockUsers.find(u => String(u.id) === String(m));
-    return {
-      id: m,
-      name: found?.name || 'สมาชิก',
-      username: found?.username || '',
-      skills: found?.skills || '',
-      role: String(m) === String(leaderId) ? 'leader' : 'member'
-    };
-  });
+  const rawMembers = Array.isArray(locals.members) ? locals.members : [];
+  const memberList = rawMembers.map(m => ({
+    id: m.user_id,
+    name: `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.username || 'สมาชิก',
+    username: m.username || '',
+    skills: Array.isArray(m.skills) ? m.skills.join(', ') : '',
+    role: m.team_role
+  }));
 
   const isMember = Boolean(
     curUserId && memberList.some(m => String(m.id) === String(curUserId))
   );
 
   // ตรวจสอบสถานะการส่งคำขอของผู้ใช้ปัจจุบัน
-  const mockApps = Array.isArray(locals.db?.apps) ? locals.db.apps : [];
-  const myApp = locals.myApplication
-    || (curUserId ? mockApps.find(a => String(a.team) === String(tId) && String(a.user) === String(curUserId)) : null);
+  const myApp = locals.myApplication || null;
   const myApplicationDetails = locals.myApplicationDetails || myApp;
 
-  const canApply = Boolean(curUser && !isLeader && !isMember && !myApp && tStatus === 'open' && memberList.length < tMax);
-  const loginUrl = isMock ? '/login' : '/auth/login';
+  const canApply = Boolean(curUser && !isAdmin && !isLeader && !isMember && !myApp && tStatus === 'open' && memberList.length < tMax);
+  const loginUrl = '/auth/login';
 %>
 
 <div class="pf-wrap">
@@ -107,7 +84,9 @@
 
       <!-- ปุ่มส่งคำขอ / จัดการทีม และ ติดต่อหัวหน้าทีม -->
       <div style="display:flex;flex-direction:column;gap:8px;min-width:170px">
-        <% if (isLeader) { %>
+        <% if (isAdmin) { %>
+          <!-- ผู้ดูแลระบบดูรายละเอียดได้ แต่สมัครเข้าทีมไม่ได้ -->
+        <% } else if (isLeader) { %>
           <a class="btn" style="justify-content:center" href="/leader/teams?team=<%= tId %>">จัดการทีม</a>
         <% } else if (myApplicationDetails?.status === 'pending') { %>
           <span class="st <%= myApplicationDetails.status === 'approved' ? 'accepted' : myApplicationDetails.status %>">

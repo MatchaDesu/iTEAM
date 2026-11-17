@@ -1,6 +1,6 @@
 <%
   const teamList = Array.isArray(locals.teams) ? locals.teams : [];
-  const catList = locals.categories || locals.cats || [];
+  const catList = locals.categories || [];
   const qText = locals.q || '';
   const selectedCat = locals.cat || '';
 %>
@@ -20,6 +20,11 @@
 </form>
 
 <div class="tw">
+  <style>
+    .admin-team-row { cursor: pointer; }
+    .admin-team-row:hover { background: rgba(37, 99, 235, .06); }
+    .admin-team-row:focus-visible { outline: 2px solid var(--bl); outline-offset: -2px; }
+  </style>
   <table class="tb">
     <thead>
       <tr>
@@ -31,29 +36,13 @@
     </thead>
     <tbody>
       <% teamList.forEach(t => {
-        const tId = t.team_id ?? t.id;
-        const tName = t.team_name ?? t.name;
-        const tDesc = t.description ?? t.desc ?? '';
+        const tId = t.team_id;
+        const tName = t.team_name;
+        const tDesc = t.description || '';
       %>
-        <tr>
+        <tr class="admin-team-row" data-team-url="/teams/<%= tId %>" tabindex="0" aria-label="ดูรายละเอียดทีม <%= tName %>">
           <td><b><a href="/teams/<%= tId %>" style="text-decoration:none;color:inherit"><%= tName %></a></b></td>
-          <td>
-            <form class="tools" method="post" action="/admin/teams/<%= tId %>/category" style="margin:0;min-width:190px">
-              <select name="category_id" aria-label="หมวดหมู่ของทีม <%= tName %>">
-                <option value="">ไม่ระบุ</option>
-                <% catList.forEach(c => {
-                  const categoryId = c.category_id ?? c.id ?? c.category_name ?? c;
-                  const categoryName = c.category_name ?? c.name ?? c;
-                  const teamCategoryId = t.category_id ?? t.cat ?? '';
-                %>
-                  <option value="<%= categoryId %>" <%= String(teamCategoryId) === String(categoryId) ? 'selected' : '' %>>
-                    <%= categoryName %>
-                  </option>
-                <% }) %>
-              </select>
-              <button type="submit" class="btn sec sm">บันทึก</button>
-            </form>
-          </td>
+          <td><%= t.category_name || 'ไม่ระบุ' %></td>
           <td class="mu"><%= tDesc %></td>
           <td>
             <form method="post" action="/admin/teams/<%= tId %>/delete"
@@ -69,3 +58,19 @@
     </tbody>
   </table>
 </div>
+
+<script>
+  document.querySelectorAll('.admin-team-row').forEach(row => {
+    const openTeam = event => {
+      if (event.target.closest('a, button, form, input, select, textarea')) return;
+      window.location.href = row.dataset.teamUrl;
+    };
+    row.addEventListener('click', openTeam);
+    row.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        window.location.href = row.dataset.teamUrl;
+      }
+    });
+  });
+</script>

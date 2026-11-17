@@ -1,24 +1,17 @@
 <%
-  // ===== Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
-  const catList = locals.categories || locals.cats || [];
+  const catList = locals.categories || [];
   const curUser = locals.user || null;
-  const curUserId = curUser ? (curUser.user_id ?? curUser.id) : null;
-  const curUserName = curUser
-    ? (curUser.first_name
-        ? `${curUser.first_name} ${curUser.last_name || ''}`.trim()
-        : (curUser.name || curUser.username || 'ฉัน'))
-    : 'ฉัน';
+  const curUserId = curUser?.user_id;
+  const curUserName = curUser ? `${curUser.first_name} ${curUser.last_name || ''}`.trim() : '';
 
   // รายชื่อผู้ใช้ในระบบสำหรับช่องค้นหา "เพิ่มสมาชิกในระบบ" (กรองตัวเองและแอดมินออก)
-  const rawUsers = Array.isArray(locals.users)
-    ? locals.users
-    : (Array.isArray(locals.db?.users) ? locals.db.users : []);
+  const rawUsers = Array.isArray(locals.users) ? locals.users : [];
 
   const searchableUsers = rawUsers
-    .filter(u => String(u.user_id ?? u.id) !== String(curUserId) && u.role !== 'admin')
+    .filter(u => String(u.user_id) !== String(curUserId) && u.role !== 'admin')
     .map(u => ({
-      id: u.user_id ?? u.id,
-      name: u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : (u.name || u.username || ''),
+      id: u.user_id,
+      name: `${u.first_name} ${u.last_name || ''}`.trim() || u.username || '',
       username: u.username || '',
       email: u.email || '',
       skills: Array.isArray(u.skills) ? u.skills.join(', ') : (u.skills || '')

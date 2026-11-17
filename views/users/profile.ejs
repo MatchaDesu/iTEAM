@@ -1,15 +1,14 @@
 <%
-  // ===== 1. Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
-  const u = locals.profileUser || locals.user || {};
-  const uId = u.user_id ?? u.id ?? null;
+  const u = locals.profileUser;
+  const uId = u.user_id;
 
   const curUser = locals.user || null;
-  const curId = curUser ? (curUser.user_id ?? curUser.id) : null;
+  const curId = curUser?.user_id ?? null;
   const isOwnProfile = Boolean(curId && uId && String(curId) === String(uId));
 
   const fullName = u.first_name
     ? `${u.first_name} ${u.last_name || ''}`.trim()
-    : (u.name || u.username || 'ไม่ระบุชื่อ');
+    : (u.username || 'ไม่ระบุชื่อ');
   const avatarInitial = fullName.charAt(0).toUpperCase() || 'U';
 
   const rawAvatar = u.profile_image || '';
@@ -17,48 +16,18 @@
     || rawAvatar.includes('profile-anonymous')
     || rawAvatar.includes('profile_anonymous');
 
-  const skillList = Array.isArray(u.skills)
-    ? u.skills
-    : (typeof u.skills === 'string' && u.skills.trim()
-        ? u.skills.split(',').map(s => s.trim()).filter(Boolean)
-        : []);
+  const skillList = Array.isArray(u.skills) ? u.skills : [];
 
   // ===== 2. แยกกลุ่มทีมที่เป็นหัวหน้าทีม และทีมที่เป็นสมาชิก =====
-  let leaderTeams = [];
-  let memberTeams = [];
+  const teams = Array.isArray(locals.teams) ? locals.teams : [];
+  const leaderTeams = teams.filter(t => t.team_role === 'leader');
+  const memberTeams = teams.filter(t => t.team_role !== 'leader');
 
-  if (Array.isArray(locals.teams)) {
-    // กรณีดึงจาก PostgreSQL ผ่าน teamMemberModel.getTeamsByUserId(userId)
-    leaderTeams = locals.teams.filter(t => t.team_role === 'leader');
-    memberTeams = locals.teams.filter(t => t.team_role !== 'leader');
-  } else if (Array.isArray(locals.db?.teams) && uId !== null) {
-    // กรณีข้อมูลจำลองจาก preview.js
-    leaderTeams = locals.db.teams.filter(t => String(t.leader) === String(uId));
-    memberTeams = locals.db.teams.filter(
-      t => Array.isArray(t.members)
-        && t.members.some(m => String(m) === String(uId))
-        && String(t.leader) !== String(uId)
-    );
-  }
-
-  // ===== 3. ดึงรายการใบสมัครของผู้ใช้ (รองรับทั้ง PostgreSQL และ preview.js) =====
-  const mockTeams = Array.isArray(locals.db?.teams) ? locals.db.teams : [];
-  let myApps = [];
-
-  if (Array.isArray(locals.applications)) {
-    myApps = locals.applications;
-  } else if (Array.isArray(locals.apps)) {
-    myApps = locals.apps;
-  } else if (Array.isArray(locals.db?.apps) && uId !== null) {
-    myApps = locals.db.apps.filter(a => String(a.user) === String(uId));
-  }
-
-  const appsUrl = locals.applicationsUrl || (locals.db ? '/applications' : '/application');
-  const cancelBaseUrl = locals.db ? '/applications' : '/application';
-  const statusMap = Object.assign(
-    { pending: 'รอพิจารณา', approved: 'ได้รับการตอบรับ', accepted: 'ได้รับการตอบรับ', rejected: 'ไม่ผ่าน' },
-    locals.ST || {}
-  );
+  // ===== 3. รายการใบสมัครของผู้ใช้ =====
+  const myApps = Array.isArray(locals.applications) ? locals.applications : [];
+  const appsUrl = '/application';
+  const cancelBaseUrl = '/application';
+  const statusMap = { pending: 'รอพิจารณา', approved: 'ได้รับการตอบรับ', accepted: 'ได้รับการตอบรับ', rejected: 'ไม่ผ่าน' };
 %>
 
 <div class="pf-wrap">
@@ -139,10 +108,10 @@
       <% if (leaderTeams.length) { %>
         <div class="stack">
           <% leaderTeams.forEach(t => {
-            const tId = t.team_id ?? t.id;
-            const tName = t.team_name ?? t.name ?? '';
-            const tCat = t.category_name ?? t.cat ?? '';
-            const tDesc = t.description ?? t.desc ?? '';
+            const tId = t.team_id;
+            const tName = t.team_name || '';
+            const tCat = t.category_name || '';
+            const tDesc = t.description || '';
           %>
             <div class="pf-team-row">
               <div style="min-width:0;flex:1">
@@ -184,10 +153,10 @@
       <% if (memberTeams.length) { %>
         <div class="stack">
           <% memberTeams.forEach(t => {
-            const tId = t.team_id ?? t.id;
-            const tName = t.team_name ?? t.name ?? '';
-            const tCat = t.category_name ?? t.cat ?? '';
-            const tDesc = t.description ?? t.desc ?? '';
+            const tId = t.team_id;
+            const tName = t.team_name || '';
+            const tCat = t.category_name || '';
+            const tDesc = t.description || '';
           %>
             <div class="pf-team-row">
               <div style="min-width:0;flex:1">
@@ -234,12 +203,11 @@
       <% if (myApps.length) { %>
         <div class="stack">
           <% myApps.forEach(a => {
-            const appId = a.application_id ?? a.id;
-            const tId = a.team_id ?? a.team;
-            const foundTeam = mockTeams.find(x => String(x.team_id ?? x.id) === String(tId));
-            const tName = a.team_name ?? foundTeam?.team_name ?? foundTeam?.name ?? 'ไม่พบชื่อทีม';
-            const tCat = a.category_name ?? foundTeam?.category_name ?? foundTeam?.cat ?? '';
-            const msgText = a.message ?? a.msg ?? '';
+            const appId = a.application_id;
+            const tId = a.team_id;
+            const tName = a.team_name || 'ไม่พบชื่อทีม';
+            const tCat = a.category_name || '';
+            const msgText = a.message || '';
             const badgeClass = a.status === 'approved' ? 'accepted' : a.status;
           %>
             <div class="pf-team-row">

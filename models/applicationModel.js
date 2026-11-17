@@ -47,9 +47,10 @@ exports.getByUserId = (user_id) => {
     return new Promise((resolve, reject) => {
         const sql = `SELECT a.application_id, a.user_id, a.team_id, a.message, 
                         a.status, a.applied_at, a.reviewed_at,
-                        t.team_name
+                        t.team_name, c.category_name
                  FROM applications a
                  JOIN teams t ON a.team_id = t.team_id
+                 LEFT JOIN categories c ON t.category_id = c.category_id
                  JOIN users u ON a.user_id = u.user_id AND u.deleted_at IS NULL
                  WHERE a.user_id = $1
                  ORDER BY a.applied_at DESC`;

@@ -1,12 +1,10 @@
 <%
-  // ===== Data Adapter: รองรับทั้ง preview.js และ PostgreSQL (app.js) =====
-  const isMock = Boolean(locals.db);
   const curUser = locals.user || null;
 
   const displayName = curUser
     ? (curUser.first_name
         ? `${curUser.first_name} ${curUser.last_name || ''}`.trim()
-        : (curUser.name || curUser.username || 'สมาชิก'))
+        : (curUser.username || 'สมาชิก'))
     : '';
   const subLabel = curUser
     ? (curUser.username ? `@${curUser.username}` : (curUser.email || ''))
@@ -20,12 +18,10 @@
 
   const activeTab = locals.active || '';
   const unreadCount = Number(locals.unread || 0);
-  const pendingCount = Number(locals.pendingPosts || 0);
 
-  // เส้นทางที่รองรับทั้งโหมดพรีวิวและเซิร์ฟเวอร์หลัก
-  const loginUrl = isMock ? '/login' : '/auth/login';
-  const signupUrl = isMock ? '/register' : '/auth/signup';
-  const appsUrl = isMock ? '/applications' : '/application';
+  const loginUrl = '/auth/login';
+  const signupUrl = '/auth/signup';
+  const appsUrl = '/application';
 
   // ลิงก์เมนูหลักฝั่งซ้าย (วางต่อจากโลโก้ตามภาพตัวอย่าง)
   const mainLinks = curUser && curUser.role === 'admin'
@@ -54,9 +50,6 @@
       <% mainLinks.forEach(([k, href, label]) => { %>
         <a href="<%= href %>" class="<%= activeTab === k ? 'on' : '' %>">
           <%= label %>
-          <% if (k === 'teams' && pendingCount > 0) { %>
-            <span class="dot"><%= pendingCount %></span>
-          <% } %>
         </a>
       <% }) %>
     </nav>
