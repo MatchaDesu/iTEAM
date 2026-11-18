@@ -32,6 +32,7 @@ exports.getByTeamId = (team_id) => {
                         u.username, u.first_name, u.last_name, u.profile_image
                  FROM applications a
                  JOIN users u ON a.user_id = u.user_id
+                 JOIN teams t ON t.team_id = a.team_id AND t.deleted_at IS NULL
                  WHERE a.team_id = $1 AND u.deleted_at IS NULL
                  ORDER BY a.applied_at DESC`;
 
@@ -49,7 +50,7 @@ exports.getByUserId = (user_id) => {
                         a.status, a.applied_at, a.reviewed_at,
                         t.team_name
                  FROM applications a
-                 JOIN teams t ON a.team_id = t.team_id
+                 JOIN teams t ON a.team_id = t.team_id AND t.deleted_at IS NULL
                  JOIN users u ON a.user_id = u.user_id AND u.deleted_at IS NULL
                  WHERE a.user_id = $1
                  ORDER BY a.applied_at DESC`;
@@ -95,7 +96,7 @@ exports.createApplication = async (application) => {
     try {
         await client.query('BEGIN');
         const teamResult = await client.query(
-            'SELECT status, max_members, created_by, team_name FROM teams WHERE team_id = $1 FOR UPDATE',
+            'SELECT status, max_members, created_by, team_name FROM teams WHERE team_id = $1 AND deleted_at IS NULL FOR UPDATE',
             [team_id]
         );
         const team = teamResult.rows[0];
@@ -213,7 +214,7 @@ exports.reviewApplication = async (id, status, reviewed_by) => {
         }
 
         const lockedTeam = await client.query(
-            'SELECT status, max_members FROM teams WHERE team_id = $1 FOR UPDATE',
+            'SELECT status, max_members FROM teams WHERE team_id = $1 AND deleted_at IS NULL FOR UPDATE',
             [teamId]
         );
         const team = lockedTeam.rows[0];
@@ -226,7 +227,7 @@ exports.reviewApplication = async (id, status, reviewed_by) => {
         const found = await client.query(
             `SELECT a.application_id, a.user_id, a.team_id, a.status, t.team_name
              FROM applications a
-             JOIN teams t ON t.team_id = a.team_id
+             JOIN teams t ON t.team_id = a.team_id AND t.deleted_at IS NULL
              WHERE a.application_id = $1 FOR UPDATE OF a`,
             [id]
         );

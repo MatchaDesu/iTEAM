@@ -6,6 +6,7 @@ exports.getAll = () => {
         const sql = `SELECT t.*, c.category_name
                  FROM teams t
                  LEFT JOIN categories c ON t.category_id = c.category_id
+                 WHERE t.deleted_at IS NULL
                  ORDER BY t.created_at DESC`;
 
         db.query(sql, [], (err, result) => {
@@ -14,6 +15,34 @@ exports.getAll = () => {
             resolve(result.rows);
         });
     });
+};
+
+exports.getAllPage = async ({ q, categoryId, limit, offset }) => {
+    const params = [];
+    const conditions = ['t.deleted_at IS NULL'];
+    if (q) {
+        params.push(`%${q}%`);
+        const p = `$${params.length}`;
+        conditions.push(`(t.team_name ILIKE ${p} OR t.description ILIKE ${p} OR array_to_string(t.roles, ' ') ILIKE ${p})`);
+    }
+    if (categoryId) {
+        params.push(categoryId);
+        conditions.push(`(t.category_id::text = $${params.length} OR c.category_name = $${params.length})`);
+    }
+    const where = conditions.join(' AND ');
+    const count = await db.query(
+        `SELECT COUNT(*)::int AS total FROM teams t LEFT JOIN categories c ON t.category_id = c.category_id WHERE ${where}`,
+        params
+    );
+    const dataParams = [...params, limit, offset];
+    const result = await db.query(
+        `SELECT t.*, c.category_name FROM teams t
+         LEFT JOIN categories c ON t.category_id = c.category_id
+         WHERE ${where} ORDER BY t.created_at DESC
+         LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`,
+        dataParams
+    );
+    return { teams: result.rows, total: count.rows[0].total };
 };
 
 
@@ -25,7 +54,7 @@ exports.getById = (id) => {
                          WHERE tm.team_id = t.team_id) AS member_count
                  FROM teams t
                  LEFT JOIN categories c ON t.category_id = c.category_id
-                 WHERE t.team_id = $1`;
+                 WHERE t.team_id = $1 AND t.deleted_at IS NULL`;
 
         db.query(sql, [id], (err, result) => {
             if (err) return reject(err);
@@ -59,7 +88,7 @@ exports.updateTeam = (id, data) => {
         const sql = `UPDATE teams 
                  SET team_name = $1, description = $2, category_id = $3, status = $4,
                      updated_at = CURRENT_TIMESTAMP
-                 WHERE team_id = $5`;
+                 WHERE team_id = $5 AND deleted_at IS NULL`;
 
         db.query(sql, [team_name, description, category_id, status, id], (err, result) => {
             if (err) return reject(err);
@@ -71,7 +100,7 @@ exports.updateTeam = (id, data) => {
 
 exports.updateCategory = async (id, category_id) => {
     const result = await db.query(
-        `UPDATE teams SET category_id = $1, updated_at = CURRENT_TIMESTAMP WHERE team_id = $2`,
+        `UPDATE teams SET category_id = $1, updated_at = CURRENT_TIMESTAMP WHERE team_id = $2 AND deleted_at IS NULL`,
         [category_id, id]
     );
     return { changes: result.rowCount };

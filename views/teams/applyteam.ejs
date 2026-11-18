@@ -124,9 +124,7 @@
       </div>
 
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:42px;height:42px;border-radius:50%;background:var(--sk);color:var(--bl);font-weight:700;display:grid;place-items:center;flex-shrink:0">
-          <%= userFullName.charAt(0).toUpperCase() %>
-        </div>
+        <%- include('../partials/user-avatar', { avatarName: userFullName, avatarImage: curUser.profile_image, avatarHref: '/profile', avatarSize: 42 }) %>
         <div>
           <div style="font-weight:700;font-size:15px">
             <%= userFullName %>

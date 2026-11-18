@@ -9,7 +9,7 @@ exports.getByUserId = async (userId) => {
          FROM favorite_teams f
          JOIN teams t ON t.team_id = f.team_id
          LEFT JOIN categories c ON c.category_id = t.category_id
-         WHERE f.user_id = $1
+         WHERE f.user_id = $1 AND t.deleted_at IS NULL
          ORDER BY f.created_at DESC`,
         [userId]
     );

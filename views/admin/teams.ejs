@@ -1,21 +1,11 @@
 <%
   const teamList = Array.isArray(locals.teams) ? locals.teams : [];
-  const catList = locals.categories || locals.cats || [];
   const qText = locals.q || '';
-  const selectedCat = locals.cat || '';
 %>
 
-<h2>จัดการทีม</h2>
+<h1>ทีมทั้งหมด</h1>
 <form class="tools" method="get" action="/admin/teams">
   <input name="q" value="<%= qText %>" placeholder="ค้นหาชื่อทีม" aria-label="ค้นหา">
-  <select name="cat" aria-label="หมวดหมู่" onchange="this.form.submit()">
-    <option value="">ทุกหมวดหมู่</option>
-    <% catList.forEach(c => {
-      const cName = typeof c === 'object' ? c.category_name : c;
-    %>
-      <option value="<%= cName %>" <%= cName === selectedCat ? 'selected' : '' %>><%= cName %></option>
-    <% }) %>
-  </select>
   <button type="submit" class="btn sec sm">ค้นหา</button>
 </form>
 
@@ -26,7 +16,7 @@
         <th>ชื่อทีม</th>
         <th>หมวดหมู่</th>
         <th>รายละเอียด</th>
-        <th>จัดการ</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -36,31 +26,10 @@
         const tDesc = t.description ?? t.desc ?? '';
       %>
         <tr>
-          <td><b><a href="/teams/<%= tId %>" style="text-decoration:none;color:inherit"><%= tName %></a></b></td>
-          <td>
-            <form class="tools" method="post" action="/admin/teams/<%= tId %>/category" style="margin:0;min-width:190px">
-              <select name="category_id" aria-label="หมวดหมู่ของทีม <%= tName %>">
-                <option value="">ไม่ระบุ</option>
-                <% catList.forEach(c => {
-                  const categoryId = c.category_id ?? c.id ?? c.category_name ?? c;
-                  const categoryName = c.category_name ?? c.name ?? c;
-                  const teamCategoryId = t.category_id ?? t.cat ?? '';
-                %>
-                  <option value="<%= categoryId %>" <%= String(teamCategoryId) === String(categoryId) ? 'selected' : '' %>>
-                    <%= categoryName %>
-                  </option>
-                <% }) %>
-              </select>
-              <button type="submit" class="btn sec sm">บันทึก</button>
-            </form>
-          </td>
+          <td><b><%= tName %></b></td>
+          <td><%= t.category_name || 'ไม่ระบุหมวดหมู่' %></td>
           <td class="mu"><%= tDesc %></td>
-          <td>
-            <form method="post" action="/admin/teams/<%= tId %>/delete"
-                  onsubmit="return confirm('ลบทีมนี้ถาวร?')">
-              <button type="submit" class="btn no sm">ลบทีม</button>
-            </form>
-          </td>
+          <td><a class="btn sec sm" href="/admin/teams/<%= tId %>">ดูรายละเอียด</a></td>
         </tr>
       <% }) %>
       <% if (!teamList.length) { %>
@@ -69,3 +38,4 @@
     </tbody>
   </table>
 </div>
+<%- include('../partials/pagination', { pagination: locals.pagination }) %>

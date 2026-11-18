@@ -246,12 +246,17 @@
               ? `${a.first_name} ${a.last_name || ''}`.trim()
               : (mockAp?.name || a.username || 'ผู้สมัคร');
             const apSub = mockAp?.skills || (a.username ? `@${a.username}` : '');
+            const apUserId = a.user_id ?? a.user;
             const msgText = a.message ?? a.msg ?? '';
             const badgeClass = a.status === 'approved' ? 'accepted' : a.status;
           %>
             <div class="card row app-card">
               <div>
-                <h3><a class="app-card-link" href="/application/<%= appId %>"><%= apName %></a></h3>
+                <div class="user-name-with-avatar">
+                  <%- include('../partials/user-avatar', { avatarName: apName, avatarImage: a.profile_image || mockAp?.profile_image, avatarHref: `/users/${apUserId}`, avatarSize: 38 }) %>
+                  <h3><a class="app-card-link" href="/users/<%= apUserId %>"><%= apName %></a></h3>
+                  <a class="btn sec sm" href="/application/<%= appId %>">ดูคำขอ</a>
+                </div>
                 <div class="mu" style="font-size:14px">
                   <% if (apSub) { %>ข้อมูลผู้สมัคร: <%= apSub %><br><% } %>
                   “<%= msgText || 'ไม่มีข้อความ' %>”
@@ -291,7 +296,10 @@
         %>
           <div class="card row">
             <div>
-              <h3><%= mName %></h3>
+              <div class="user-name-with-avatar">
+                <%- include('../partials/user-avatar', { avatarName: mName, avatarImage: isObj ? m.profile_image : mockMem?.profile_image, avatarHref: `/users/${mId}`, avatarSize: 38 }) %>
+                <h3><a href="/users/<%= mId %>"><%= mName %></a></h3>
+              </div>
               <span class="mu"><%= isLead ? 'หัวหน้าทีม' : 'สมาชิก' %></span>
             </div>
             <% if (!isLead) { %>

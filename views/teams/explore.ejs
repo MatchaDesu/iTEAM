@@ -38,3 +38,4 @@
 <% if (!teamList.length) { %>
   <div class="empty">ไม่พบทีมที่ตรงกับการค้นหา ลองเปลี่ยนคำค้นหรือหมวดหมู่</div>
 <% } %>
+<%- include('../partials/pagination', { pagination: locals.pagination }) %>

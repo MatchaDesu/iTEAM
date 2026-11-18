@@ -64,7 +64,7 @@
 <div class="pf-wrap">
   <!-- 1. การ์ดข้อมูลโปรไฟล์หลัก (รวมชื่อ แนะนำตัว ช่องทางติดต่อ และป้ายทักษะไว้ในกล่องเดียว) -->
   <div class="card pf-hero">
-    <div class="pf-avatar-box">
+    <a class="pf-avatar-box" href="/profile" aria-label="ไปหน้าโปรไฟล์ของ <%= fullName %>">
       <% if (!isDefaultAvatar) { %>
         <img
           class="pf-avatar-img"
@@ -75,7 +75,7 @@
       <% } else { %>
         <div class="pf-avatar-initial"><%= avatarInitial %></div>
       <% } %>
-    </div>
+    </a>
 
     <div class="pf-main">
       <div class="pf-top-row">

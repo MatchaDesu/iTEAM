@@ -1,0 +1,46 @@
+<%
+  const reportList = Array.isArray(locals.reports) ? locals.reports : [];
+  const statusLabel = status => status === 'handled' ? 'จัดการแล้ว' : 'รอตรวจ';
+  const reportTargetName = report => report.target_type === 'user'
+    ? `${report.reported_user_first_name || ''} ${report.reported_user_last_name || ''}`.trim() || report.reported_user_username || 'ผู้ใช้'
+    : report.team_name || 'ทีม';
+%>
+
+<h1>รายงาน</h1>
+<% if (reportList.length) { %>
+  <div class="stack">
+    <% reportList.forEach(report => {
+      const reporterName = `${report.reporter_first_name || ''} ${report.reporter_last_name || ''}`.trim()
+        || report.reporter_username || 'ผู้ใช้';
+    %>
+      <div class="card admin-report-card">
+        <div class="admin-report-card-heading">
+          <div class="user-name-with-avatar">
+            <%- include('../partials/user-avatar', {
+              avatarName: reporterName,
+              avatarImage: report.reporter_profile_image,
+              avatarHref: `/admin/users/${report.reporter_id}`,
+              avatarSize: 40
+            }) %>
+          <span><a href="/admin/users/<%= report.reporter_id %>"><%= reporterName %></a>
+            รายงาน<%= report.target_type === 'user' ? 'ผู้ใช้' : 'ทีม' %>: <b><%= reportTargetName(report) %></b></span>
+          </div>
+          <span class="st <%= report.status === 'handled' ? 'ok' : 'no' %>"><%= statusLabel(report.status) %></span>
+        </div>
+        <% if (report.target_type === 'user' && report.reported_user_id) { %>
+          <div class="user-name-with-avatar" style="margin-top:10px">
+            <%- include('../partials/user-avatar', { avatarName: reportTargetName(report), avatarImage: report.reported_user_profile_image, avatarHref: `/admin/users/${report.reported_user_id}`, avatarSize: 34 }) %>
+            <a href="/admin/users/<%= report.reported_user_id %>"><%= reportTargetName(report) %></a>
+          </div>
+        <% } else { %>
+          <div style="margin-top:10px">ทีม: <b><%= reportTargetName(report) %></b></div>
+        <% } %>
+        <p class="mu admin-report-reason"><%= report.reason %></p>
+        <span class="mu" style="font-size:13px"><%= new Date(report.created_at).toLocaleString('th-TH') %></span>
+        <a class="btn sec sm" href="/admin/reports/<%= report.report_id %>">ดูรายละเอียด</a>
+      </div>
+    <% }) %>
+  </div>
+<% } else { %>
+  <div class="empty">ยังไม่มีรายงาน</div>
+<% } %>

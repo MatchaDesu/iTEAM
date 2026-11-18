@@ -1,0 +1,32 @@
+<%
+  const avatarUser = locals.avatarUser || {};
+  const avatarName = locals.avatarName || (avatarUser.first_name
+    ? `${avatarUser.first_name} ${avatarUser.last_name || ''}`.trim()
+    : (avatarUser.name || avatarUser.username || 'ผู้ใช้'));
+  const avatarInitial = Array.from(avatarName)[0]?.toUpperCase() || 'U';
+  const avatarImage = locals.avatarImage || avatarUser.profile_image || '';
+  const avatarSize = Number(locals.avatarSize) || 40;
+  const avatarHref = locals.avatarHref || '';
+  const hasAvatarImage = avatarImage
+    && !avatarImage.includes('profile-anonymous')
+    && !avatarImage.includes('profile_anonymous');
+%>
+<% if (avatarHref) { %>
+  <a class="user-avatar" style="--user-avatar-size:<%= avatarSize %>px" href="<%= avatarHref %>" aria-label="ดูโปรไฟล์ <%= avatarName %>">
+    <% if (hasAvatarImage) { %>
+      <img src="<%= avatarImage %>" alt="<%= avatarName %>" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span style="display:none"><%= avatarInitial %></span>
+    <% } else { %>
+      <span><%= avatarInitial %></span>
+    <% } %>
+  </a>
+<% } else { %>
+  <span class="user-avatar" style="--user-avatar-size:<%= avatarSize %>px" aria-label="<%= avatarName %>">
+    <% if (hasAvatarImage) { %>
+      <img src="<%= avatarImage %>" alt="<%= avatarName %>" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span style="display:none"><%= avatarInitial %></span>
+    <% } else { %>
+      <span><%= avatarInitial %></span>
+    <% } %>
+  </span>
+<% } %>

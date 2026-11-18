@@ -1,0 +1,63 @@
+<%
+  const item = locals.report || {};
+  const reporterName = `${item.reporter_first_name || ''} ${item.reporter_last_name || ''}`.trim()
+    || item.reporter_username || 'ผู้ใช้';
+  const targetName = item.target_type === 'user'
+    ? `${item.reported_user_first_name || ''} ${item.reported_user_last_name || ''}`.trim() || item.reported_user_username || 'ผู้ใช้'
+    : item.team_name || 'ทีม';
+  const isHandled = item.status === 'handled';
+%>
+
+<div class="admin-report-detail">
+  <a class="btn sec sm" href="/admin/reports">← กลับไปรายงาน</a>
+  <h1>รายละเอียดรายงาน #<%= item.report_id %></h1>
+  <section class="card">
+    <h2>ผู้รายงาน</h2>
+    <div class="user-name-with-avatar">
+      <%- include('../partials/user-avatar', {
+        avatarName: reporterName,
+        avatarImage: item.reporter_profile_image,
+        avatarHref: `/admin/users/${item.reporter_id}`,
+        avatarSize: 48
+      }) %>
+      <span><%= reporterName %><% if (item.reporter_username) { %> (@<%= item.reporter_username %>)<% } %></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>สิ่งที่ถูกรายงาน</h2>
+    <div class="user-name-with-avatar">
+      <% if (item.target_type === 'user' && item.reported_user_id) { %>
+        <%- include('../partials/user-avatar', {
+          avatarName: targetName,
+          avatarImage: item.reported_user_profile_image,
+          avatarHref: `/admin/users/${item.reported_user_id}`,
+          avatarSize: 48
+        }) %>
+        <a href="/admin/users/<%= item.reported_user_id %>"><%= targetName %></a>
+      <% } else if (item.target_type === 'team' && item.team_id) { %>
+        <span class="tag">ทีม</span>
+        <a href="/admin/teams/<%= item.team_id %>"><%= targetName %></a>
+      <% } else { %>
+        <span><%= targetName %></span>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>เหตุผล</h2>
+    <p class="admin-report-detail-reason"><%= item.reason %></p>
+    <span class="mu">ส่งเมื่อ <%= new Date(item.created_at).toLocaleString('th-TH') %></span>
+  </section>
+
+  <section class="card admin-report-status-card">
+    <span class="st <%= isHandled ? 'ok' : 'no' %>"><%= isHandled ? 'จัดการแล้ว' : 'รอตรวจ' %></span>
+    <% if (isHandled) { %>
+      <span class="mu">ตรวจเมื่อ <%= item.reviewed_at ? new Date(item.reviewed_at).toLocaleString('th-TH') : '-' %></span>
+    <% } else { %>
+      <form method="post" action="/admin/reports/<%= item.report_id %>/handled">
+        <button class="btn" type="submit">ทำเครื่องหมายว่าจัดการแล้ว</button>
+      </form>
+    <% } %>
+  </section>
+</div>

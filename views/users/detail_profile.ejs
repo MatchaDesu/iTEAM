@@ -6,6 +6,9 @@
   // ข้อมูลเจ้าของโปรไฟล์ที่กำลังเปิดดู (แยกจาก locals.user ซึ่งเป็นคนล็อกอิน)
   const target = locals.profileUser || locals.targetUser || locals.member || locals.u || {};
   const targetId = target.user_id ?? target.id ?? null;
+  const adminReadOnly = Boolean(locals.adminReadOnly);
+  const userProfileUrl = id => adminReadOnly ? `/admin/users/${id}` : `/users/${id}`;
+  const teamDetailsUrl = id => adminReadOnly ? `/admin/teams/${id}` : `/teams/${id}`;
   const isSelf = Boolean(viewerId && targetId && String(viewerId) === String(targetId));
 
   const fullName = target.first_name
@@ -43,31 +46,40 @@
 
 <div class="pf-wrap">
   <div>
-    <a class="btn sec sm" href="javascript:history.back()">← ย้อนกลับ</a>
+    <a class="btn sec sm" href="<%= adminReadOnly ? '/admin/users' : 'javascript:history.back()' %>">← ย้อนกลับ</a>
   </div>
 
   <!-- 1. การ์ดข้อมูลโปรไฟล์ -->
   <div class="card">
     <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
       <!-- รูปโปรไฟล์วงกลม -->
-      <div style="width:84px;height:84px;border-radius:50%;background:var(--sk);color:var(--bl);font-size:32px;font-weight:700;display:grid;place-items:center;flex-shrink:0;border:1px solid rgba(37,99,235,.15)">
-        <%= initialChar %>
-      </div>
+      <%- include('../partials/user-avatar', {
+        avatarUser: target,
+        avatarName: fullName,
+        avatarHref: userProfileUrl(targetId),
+        avatarSize: 84
+      }) %>
 
       <!-- ชื่อ, คำแนะนำตัว และช่องทางติดต่อ -->
       <div style="flex:1;min-width:240px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
           <div>
             <h2 style="margin:0"><%= fullName %></h2>
+            <% if (adminReadOnly && target.deleted_at) { %><span class="st no" style="margin-top:6px;display:inline-flex">ถูกแบน</span><% } %>
             <% if (target.username) { %>
               <div class="mu" style="font-size:14px;margin-top:2px">@<%= target.username %></div>
             <% } %>
           </div>
 
-          <% if (isSelf) { %>
+          <% if (isSelf && !adminReadOnly) { %>
             <a class="btn sec sm" href="/profile/edit">แก้ไขโปรไฟล์</a>
           <% } %>
         </div>
+        <% if (viewer && viewer.role !== 'admin' && !isSelf && targetId) { %>
+          <div style="margin-top:12px">
+            <%- include('../partials/report-button', { reportTargetType: 'user', reportTargetId: targetId }) %>
+          </div>
+        <% } %>
 
         <p style="margin:12px 0;font-size:15px;line-height:1.6;color:var(--ink)">
           <%= target.bio || 'ยังไม่มีข้อมูลแนะนำตัว' %>
@@ -130,7 +142,7 @@
             const tDesc = t.description ?? t.desc ?? '';
           %>
             <div class="pf-team-row">
-              <a href="/teams/<%= tId %>" style="min-width:0;flex:1;text-decoration:none;color:inherit">
+              <a href="<%= teamDetailsUrl(tId) %>" style="min-width:0;flex:1;text-decoration:none;color:inherit">
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                   <span class="pf-team-title"><%= tName %></span>
                   <% if (tCat) { %><span class="tag" style="margin:0"><%= tCat %></span><% } %>
@@ -142,7 +154,7 @@
               </a>
 
               <div class="acts">
-                <a class="btn sec sm" href="/teams/<%= tId %>">ดูทีม</a>
+                <a class="btn sec sm" href="<%= teamDetailsUrl(tId) %>">ดูทีม</a>
               </div>
             </div>
           <% }) %>
@@ -168,7 +180,7 @@
             const tDesc = t.description ?? t.desc ?? '';
           %>
             <div class="pf-team-row">
-              <a href="/teams/<%= tId %>" style="min-width:0;flex:1;text-decoration:none;color:inherit">
+              <a href="<%= teamDetailsUrl(tId) %>" style="min-width:0;flex:1;text-decoration:none;color:inherit">
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                   <span class="pf-team-title"><%= tName %></span>
                   <% if (tCat) { %><span class="tag" style="margin:0"><%= tCat %></span><% } %>
@@ -180,7 +192,7 @@
               </a>
 
               <div class="acts">
-                <a class="btn sec sm" href="/teams/<%= tId %>">ดูทีม</a>
+                <a class="btn sec sm" href="<%= teamDetailsUrl(tId) %>">ดูทีม</a>
               </div>
             </div>
           <% }) %>

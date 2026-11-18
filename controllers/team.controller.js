@@ -6,21 +6,36 @@ const userModel = require('../models/userModel');
 const favoriteModel = require('../models/favoriteModel');
 const { isTeamLeader } = require('../utils/teamAccess');
 const { parseId } = require('../utils/currentUser');
+const PAGE_SIZE = 10;
+
+const requestedPage = (value) => {
+    const page = Number(value);
+    return Number.isInteger(page) && page > 0 ? Math.min(page, 1000000) : 1;
+};
+
+const loadPage = async (filters, requested) => {
+    let result = await teamModel.getAllPage({ ...filters, limit: PAGE_SIZE, offset: (requested - 1) * PAGE_SIZE });
+    const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
+    const page = Math.min(requested, totalPages);
+    if (page !== requested) {
+        result = await teamModel.getAllPage({ ...filters, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+    }
+    return { ...result, page, totalPages };
+};
 
 // GET /teams
 exports.getAll = async (req, res) => {
     try {
-        const [allTeams, categories, favoriteTeamIds] = await Promise.all([
-            teamModel.getAll(),
+        const q = String(req.query.q || '').trim();
+        const cat = String(req.query.cat || '');
+        const result = await loadPage({ q, categoryId: cat }, requestedPage(req.query.page));
+        const [categories, favoriteTeamIds] = await Promise.all([
             categoryModel.getAll(),
             req.user ? favoriteModel.getTeamIdsByUserId(req.user.user_id) : Promise.resolve([])
         ]);
-        const q = String(req.query.q || '').trim().toLowerCase();
-        const cat = String(req.query.cat || '');
-        const teams = allTeams.filter(t => (!q || `${t.team_name} ${t.description} ${(t.roles || []).join(' ')}`.toLowerCase().includes(q))
-            && (!cat || String(t.category_id) === cat || t.category_name === cat));
         return res.render('teams/explore', {
-            teams, categories, favoriteTeamIds, q: req.query.q || '', cat
+            teams: result.teams, categories, favoriteTeamIds, q, cat,
+            pagination: { page: result.page, totalPages: result.totalPages, total: result.total, baseUrl: '/teams', filters: { q, cat } }
         });
     } catch (err) {
         console.error('getAll teams error:', err);

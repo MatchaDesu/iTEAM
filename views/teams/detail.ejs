@@ -9,6 +9,9 @@
   const tMax = Number(t.max_members ?? t.max ?? 5);
   const tStatus = t.status || 'open';
   const leaderId = t.created_by ?? t.leader ?? null;
+  const adminReadOnly = Boolean(locals.adminReadOnly);
+  const userProfileUrl = id => adminReadOnly ? `/admin/users/${id}` : `/users/${id}`;
+  const teamListUrl = adminReadOnly ? '/admin/teams' : '/teams';
 
   const curUser = locals.user || null;
   const curUserId = curUser ? (curUser.user_id ?? curUser.id) : null;
@@ -29,6 +32,7 @@
         id: m.user_id ?? m.id,
         name: fullName,
         username: m.username || '',
+        profile_image: m.profile_image || '',
         skills: m.skills || '',
         role: m.team_role || (String(m.user_id ?? m.id) === String(leaderId) ? 'leader' : 'member')
       };
@@ -38,6 +42,7 @@
       id: m,
       name: found?.name || 'สมาชิก',
       username: found?.username || '',
+      profile_image: found?.profile_image || '',
       skills: found?.skills || '',
       role: String(m) === String(leaderId) ? 'leader' : 'member'
     };
@@ -59,12 +64,12 @@
 
 <div class="pf-wrap">
   <div>
-    <a class="btn sec sm" href="/teams">← กลับไปหน้าค้นหาทีม</a>
+    <a class="btn sec sm" href="<%= teamListUrl %>">← <%= adminReadOnly ? 'กลับไปหน้าทีมทั้งหมด' : 'กลับไปหน้าค้นหาทีม' %></a>
   </div>
 
   <!-- 1. การ์ดหัวข้อทีม -->
   <div class="card team-detail-card" style="padding:0;overflow:hidden">
-    <% if (curUser) { %>
+    <% if (curUser && !adminReadOnly) { %>
       <form class="team-card-favorite team-detail-favorite" method="post" action="/favorites/<%= tId %>/<%= isFavorite ? 'remove' : 'save' %>">
         <input type="hidden" name="returnTo" value="/teams/<%= tId %>">
         <button
@@ -107,7 +112,8 @@
 
       <!-- ปุ่มส่งคำขอ / จัดการทีม และ ติดต่อหัวหน้าทีม -->
       <div style="display:flex;flex-direction:column;gap:8px;min-width:170px">
-        <% if (isLeader) { %>
+        <% if (!adminReadOnly) { %>
+          <% if (isLeader) { %>
           <a class="btn" style="justify-content:center" href="/leader/teams?team=<%= tId %>">จัดการทีม</a>
         <% } else if (myApplicationDetails?.status === 'pending') { %>
           <span class="st <%= myApplicationDetails.status === 'approved' ? 'accepted' : myApplicationDetails.status %>">
@@ -131,12 +137,16 @@
           <% } else { %>
             <button type="button" class="btn sec" style="justify-content:center;cursor:not-allowed" disabled>ปิดรับสมัคร</button>
           <% } %>
+          <% } %>
         <% } %>
 
-        <% if (leaderId) { %>
+        <% if (leaderId && !adminReadOnly) { %>
           <a class="btn sec" style="justify-content:center" href="/users/<%= leaderId %>">
             ✉ ติดต่อหัวหน้าทีม
           </a>
+        <% } %>
+        <% if (curUser && curUser.role !== 'admin' && !isLeader && !isMember) { %>
+          <%- include('../partials/report-button', { reportTargetType: 'team', reportTargetId: tId }) %>
         <% } %>
       </div>
     </div>
@@ -159,12 +169,15 @@
         <% memberList.forEach(m => { %>
           <div class="pf-team-row">
             <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1">
-              <div style="width:40px;height:40px;border-radius:50%;background:var(--sk);color:var(--bl);font-weight:700;display:grid;place-items:center;flex-shrink:0">
-                <%= (m.name || 'U').charAt(0).toUpperCase() %>
-              </div>
+              <%- include('../partials/user-avatar', {
+                avatarName: m.name,
+                avatarImage: m.profile_image,
+                avatarHref: userProfileUrl(m.id),
+                avatarSize: 40
+              }) %>
               <div style="min-width:0">
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                  <a href="/users/<%= m.id %>" class="pf-team-title"><%= m.name %></a>
+                  <a href="<%= userProfileUrl(m.id) %>" class="pf-team-title"><%= m.name %></a>
                   <% if (m.role === 'leader') { %>
                     <span class="st ok">หัวหน้าทีม</span>
                   <% } else { %>
@@ -177,7 +190,7 @@
               </div>
             </div>
 
-            <a class="btn sec sm" href="/users/<%= m.id %>">ดูโปรไฟล์</a>
+            <a class="btn sec sm" href="<%= userProfileUrl(m.id) %>">ดูโปรไฟล์</a>
           </div>
         <% }) %>
       </div>

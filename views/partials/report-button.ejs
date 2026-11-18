@@ -1,0 +1,22 @@
+<%
+  const reportType = locals.reportTargetType;
+  const reportId = locals.reportTargetId;
+  const reportLabel = reportType === 'user' ? 'ผู้ใช้นี้' : 'ทีมนี้';
+  const dialogId = `report-dialog-${reportType}-${reportId}`;
+%>
+<button class="btn no sm" type="button" onclick="document.getElementById('<%= dialogId %>').showModal()">
+  รายงาน<%= reportType === 'user' ? 'ผู้ใช้' : 'ทีม' %>
+</button>
+<dialog class="report-dialog" id="<%= dialogId %>">
+  <form method="post" action="/reports/<%= reportType %>">
+    <h2>รายงาน<%= reportLabel %></h2>
+    <p class="mu">ระบุเหตุผลเพื่อส่งให้ผู้ดูแลตรวจสอบ</p>
+    <input type="hidden" name="target_id" value="<%= reportId %>">
+    <label for="reason-<%= reportType %>-<%= reportId %>">เหตุผล</label>
+    <textarea id="reason-<%= reportType %>-<%= reportId %>" name="reason" rows="5" maxlength="1000" required></textarea>
+    <div class="report-dialog-actions">
+      <button class="btn sec" type="button" onclick="this.closest('dialog').close()">ยกเลิก</button>
+      <button class="btn no" type="submit">ส่งรายงาน</button>
+    </div>
+  </form>
+</dialog>

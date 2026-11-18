@@ -51,7 +51,10 @@
     <div class="application-detail-section-heading">
       <div>
         <span class="application-detail-eyebrow">ข้อมูลผู้สมัคร</span>
-        <h2><%= applicantName %></h2>
+        <div class="user-name-with-avatar">
+          <%- include('../partials/user-avatar', { avatarName: applicantName, avatarImage: applicantData.profile_image, avatarHref: `/users/${applicantData.user_id}`, avatarSize: 48 }) %>
+          <h2><a href="/users/<%= applicantData.user_id %>"><%= applicantName %></a></h2>
+        </div>
       </div>
       <span class="st <%= statusClass %>"><%= statusMap[applicationData.status] || applicationData.status %></span>
     </div>

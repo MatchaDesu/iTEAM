@@ -7,6 +7,7 @@ exports.getMembersByTeamId = (team_id) => {
                         u.username, u.first_name, u.last_name, u.profile_image
                  FROM team_members tm
                  JOIN users u ON tm.user_id = u.user_id
+                 JOIN teams t ON t.team_id = tm.team_id AND t.deleted_at IS NULL
                  WHERE tm.team_id = $1 AND u.deleted_at IS NULL`;
 
     db.query(sql, [team_id], (err, result) => {
@@ -23,7 +24,7 @@ exports.getTeamsByUserId = (user_id) => {
     const sql = `SELECT tm.team_id, tm.user_id, tm.team_role, tm.joined_at,
                         t.team_name, t.description, t.category_id
                  FROM team_members tm
-                 JOIN teams t ON tm.team_id = t.team_id
+                 JOIN teams t ON tm.team_id = t.team_id AND t.deleted_at IS NULL
                  JOIN users u ON tm.user_id = u.user_id AND u.deleted_at IS NULL
                  WHERE tm.user_id = $1`;
 

@@ -26,6 +26,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(sessionMiddleware);
 app.use(flash);
 app.use(attachUser);
+app.use((req, res, next) => {
+    res.locals.currentPath = req.path;
+    next();
+});
 
 // Admin accounts use the dedicated dashboard, not member pages.
 app.use((req, res, next) => {
@@ -50,6 +54,7 @@ app.use('/users', require('./routes/user.routes'));
 app.use('/leader', require('./routes/leader.routes'));
 app.use('/favorites', require('./routes/favorite.routes'));
 app.use('/notifications', require('./routes/notification.routes'));
+app.use('/reports', require('./routes/report.routes'));
 app.use('/teams', require('./routes/team.routes'));
 app.use('/application', require('./routes/application.routes'));
 app.use('/admin', require('./routes/admin.routes'));

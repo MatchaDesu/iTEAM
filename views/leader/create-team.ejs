@@ -20,6 +20,7 @@
       id: u.user_id ?? u.id,
       name: u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : (u.name || u.username || ''),
       username: u.username || '',
+      profile_image: u.profile_image || '',
       email: u.email || '',
       skills: Array.isArray(u.skills) ? u.skills.join(', ') : (u.skills || '')
     }));
@@ -206,10 +207,17 @@
     addedMembers.forEach((m, idx) => {
       const row = document.createElement('div');
       row.className = 'ct-member-item';
+      const initial = Array.from(m.name || 'U')[0].toUpperCase();
+      const avatar = m.profile_image && !m.profile_image.includes('profile-anonymous')
+        ? `<img src="${escapeHtml(m.profile_image)}" alt="${escapeHtml(m.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><span style="display:none">${escapeHtml(initial)}</span>`
+        : `<span>${escapeHtml(initial)}</span>`;
       row.innerHTML = `
-        <div>
+        <div class="user-name-with-avatar">
+          <a class="user-avatar" style="--user-avatar-size:38px" href="/users/${encodeURIComponent(m.user_id)}" aria-label="ดูโปรไฟล์ ${escapeHtml(m.name)}">${avatar}</a>
+          <div>
           <div style="font-weight:600">${escapeHtml(m.name)} <span class="tag" style="margin-left:4px">สมาชิกในระบบ</span></div>
           <div class="mu" style="font-size:13px">${escapeHtml(m.email || '')}</div>
+          </div>
         </div>
         <button type="button" class="btn no sm" onclick="removeMember(${idx})">นำออก</button>
       `;
@@ -246,10 +254,13 @@
     }
 
     userSuggestBox.innerHTML = matches.map(u => `
-      <button type="button" class="ct-suggest-item" onclick="selectRegisteredUser('${u.id}')">
-        <div><b>${escapeHtml(u.name)}</b> <span class="mu">${u.username ? '@' + escapeHtml(u.username) : ''}</span></div>
-        <div class="mu" style="font-size:12px">${escapeHtml(u.skills || u.email)}</div>
-      </button>
+      <div class="ct-suggest-item">
+        <a class="user-avatar" style="--user-avatar-size:36px" href="/users/${encodeURIComponent(u.id)}" aria-label="ดูโปรไฟล์ ${escapeHtml(u.name)}">${u.profile_image && !u.profile_image.includes('profile-anonymous') ? `<img src="${escapeHtml(u.profile_image)}" alt="${escapeHtml(u.name)}">` : `<span>${escapeHtml(Array.from(u.name || 'U')[0].toUpperCase())}</span>`}</a>
+        <button type="button" class="ct-suggest-select" onclick="selectRegisteredUser('${u.id}')">
+          <div><b>${escapeHtml(u.name)}</b> <span class="mu">${u.username ? '@' + escapeHtml(u.username) : ''}</span></div>
+          <div class="mu" style="font-size:12px">${escapeHtml(u.skills || u.email)}</div>
+        </button>
+      </div>
     `).join('');
     userSuggestBox.hidden = false;
   });
@@ -261,6 +272,7 @@
       type: 'registered',
       user_id: u.id,
       name: u.name,
+      profile_image: u.profile_image,
       email: u.email,
       team_role: 'member'
     });

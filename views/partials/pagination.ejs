@@ -1,0 +1,32 @@
+<%
+  const pager = locals.pagination;
+  if (pager && pager.total > 0) {
+    const firstItem = (pager.page - 1) * 10 + 1;
+    const lastItem = Math.min(pager.page * 10, pager.total);
+    const pageHref = page => {
+      const params = Object.entries({ ...(pager.filters || {}), page })
+        .filter(([, value]) => value !== undefined && value !== null && value !== '')
+        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+        .join('&');
+      return `${pager.baseUrl}?${params}`;
+    };
+%>
+  <nav class="pagination" aria-label="เปลี่ยนหน้า">
+    <span class="pagination-count">แสดง <%= firstItem %>–<%= lastItem %> จาก <%= pager.total %> รายการ</span>
+    <% if (pager.totalPages > 1) { %>
+      <div class="pagination-controls">
+        <% if (pager.page > 1) { %>
+          <a class="btn sec sm" href="<%= pageHref(pager.page - 1) %>">ก่อนหน้า</a>
+        <% } else { %>
+          <span class="btn sec sm is-disabled" aria-disabled="true">ก่อนหน้า</span>
+        <% } %>
+        <span class="pagination-page">หน้า <%= pager.page %> / <%= pager.totalPages %></span>
+        <% if (pager.page < pager.totalPages) { %>
+          <a class="btn sec sm" href="<%= pageHref(pager.page + 1) %>">ถัดไป</a>
+        <% } else { %>
+          <span class="btn sec sm is-disabled" aria-disabled="true">ถัดไป</span>
+        <% } %>
+      </div>
+    <% } %>
+  </nav>
+<% } %>

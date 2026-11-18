@@ -2,22 +2,26 @@
   const s = locals.stats || {};
   const mockDb = locals.db || { users: [], teams: [], apps: [] };
   const totalUsers = s.total_users ?? mockDb.users.length;
-  const totalAdmins = s.total_admins ?? mockDb.users.filter(u => u.role === 'admin').length;
   const totalTeams = s.total_teams ?? mockDb.teams.length;
-  const totalCats = s.total_categories ?? (locals.categories || locals.cats || []).length;
-  const pendingApps = s.pending_applications ?? mockDb.apps.filter(a => a.status === 'pending').length;
-
-  const stat = (n, l, c) => `<div class="card">
-    <div class="mu" style="font-size:14px">${l}</div>
-    <div style="font-size:32px;font-weight:700;line-height:1.2;color:var(${c || '--bl'})">${n}</div>
-  </div>`;
+  const totalReports = s.total_reports ?? 0;
+  const pendingReports = s.pending_reports ?? 0;
 %>
 
-<h2>ภาพรวมระบบ</h2>
-<div class="stats">
-  <%- stat(totalUsers, 'ผู้ใช้ทั้งหมด') %>
-  <%- stat(totalAdmins, 'ผู้ดูแลระบบ', '--wa') %>
-  <%- stat(totalTeams, 'ทีมทั้งหมด') %>
-  <%- stat(totalCats, 'หมวดหมู่ทั้งหมด') %>
-  <%- stat(pendingApps, 'ใบสมัครรอพิจารณา', '--ok') %>
+<h1>จัดการระบบ</h1>
+<div class="admin-dashboard-grid">
+  <a class="card admin-dashboard-card" href="/admin/users">
+    <span class="admin-dashboard-label">ผู้ใช้ทั้งหมด</span>
+    <strong><%= totalUsers %></strong>
+    <span class="admin-dashboard-action">ดูรายชื่อผู้ใช้ →</span>
+  </a>
+  <a class="card admin-dashboard-card" href="/admin/teams">
+    <span class="admin-dashboard-label">ทีมทั้งหมด</span>
+    <strong><%= totalTeams %></strong>
+    <span class="admin-dashboard-action">ดูรายละเอียดทีม →</span>
+  </a>
+  <a class="card admin-dashboard-card" href="/admin/reports">
+    <span class="admin-dashboard-label">รายงานทั้งหมด</span>
+    <strong><%= totalReports %></strong>
+    <span class="admin-dashboard-action"><%= pendingReports %> รายการรอตรวจ →</span>
+  </a>
 </div>
