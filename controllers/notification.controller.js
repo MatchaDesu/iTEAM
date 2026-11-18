@@ -43,10 +43,10 @@ exports.open = async (req, res) => {
         }
 
         await notificationModel.markRead(notificationId, req.user.user_id);
-        const destination = typeof notification.link_url === 'string'
-            && notification.link_url.startsWith('/')
-            && !notification.link_url.startsWith('//')
-            ? notification.link_url
+        const destination = typeof notification.link === 'string'
+            && notification.link.startsWith('/')
+            && !notification.link.startsWith('//')
+            ? notification.link
             : '/notifications';
         return res.redirect(destination);
     } catch (err) {

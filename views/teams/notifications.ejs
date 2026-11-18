@@ -7,10 +7,13 @@
   <div class="stack">
     <% noteList.forEach(n => { %>
       <div class="card" style="<%= n.is_read ? '' : 'border-color:var(--bl)' %>">
-        <% if (n.link_url) { %>
-          <a class="notification-item-link" href="/notifications/<%= n.notification_id %>/open"><%= n.message %></a>
+        <% if (n.link) { %>
+          <a class="notification-item-link" href="/notifications/<%= n.notification_id %>/open"><%= n.title %></a>
         <% } else { %>
-          <div><%= n.message %></div>
+          <div><%= n.title %></div>
+        <% } %>
+        <% if (n.message) { %>
+          <div class="mu"><%= n.message %></div>
         <% } %>
         <% if (!n.is_read) { %>
           <form method="post" action="/notifications/<%= n.notification_id %>/read" style="margin-top:10px">

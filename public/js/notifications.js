@@ -25,7 +25,9 @@
     toast.className = 'toast notification-toast';
     toast.href = `/notifications/${encodeURIComponent(notification.notification_id)}/open`;
     toast.setAttribute('role', 'status');
-    toast.textContent = notification.message || 'มีการแจ้งเตือนใหม่';
+    toast.textContent = notification.title
+      ? `${notification.title}${notification.message ? ` — ${notification.message}` : ''}`
+      : (notification.message || 'มีการแจ้งเตือนใหม่');
     document.body.appendChild(toast);
     window.setTimeout(() => toast.remove(), 8000);
   });

@@ -128,9 +128,11 @@ CREATE TABLE IF NOT EXISTS favorite_teams (
 CREATE TABLE IF NOT EXISTS notifications (
     notification_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
-    type TEXT NOT NULL,
-    message TEXT NOT NULL,
-    link_url TEXT,
+    actor_id INTEGER REFERENCES users (user_id) ON DELETE SET NULL,
+    type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT,
+    link TEXT,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -191,6 +193,10 @@ ON favorite_teams (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS
     idx_notifications_user
 ON notifications (user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread
+ON notifications (user_id, created_at DESC)
+WHERE is_read = FALSE;
 
 CREATE INDEX IF NOT EXISTS idx_reports_status_created
 ON reports (status, created_at DESC);

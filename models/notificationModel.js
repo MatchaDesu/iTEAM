@@ -2,7 +2,7 @@ const db = require('../config/db');
 
 exports.getByUserId = async (userId) => {
     const result = await db.query(
-        `SELECT notification_id, type, message, link_url, is_read, created_at
+        `SELECT notification_id, actor_id, type, title, message, link, is_read, created_at
          FROM notifications WHERE user_id = $1 ORDER BY created_at DESC`,
         [userId]
     );
@@ -32,7 +32,7 @@ exports.getSummary = async (userId) => {
 
 exports.getAfterId = async (userId, notificationId) => {
     const result = await db.query(
-        `SELECT notification_id, type, message, link_url, is_read, created_at
+        `SELECT notification_id, actor_id, type, title, message, link, is_read, created_at
          FROM notifications
          WHERE user_id = $1 AND notification_id > $2
          ORDER BY notification_id ASC`,
@@ -43,7 +43,7 @@ exports.getAfterId = async (userId, notificationId) => {
 
 exports.getByIdForUser = async (notificationId, userId) => {
     const result = await db.query(
-        `SELECT notification_id, link_url
+        `SELECT notification_id, link
          FROM notifications WHERE notification_id = $1 AND user_id = $2`,
         [notificationId, userId]
     );

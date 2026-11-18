@@ -139,10 +139,11 @@ exports.createApplication = async (application) => {
 
         if (Number(team.created_by) !== Number(user_id)) {
             await client.query(
-                `INSERT INTO notifications (user_id, type, message, link_url)
-                 VALUES ($1, 'application_received', $2, $3)`,
+                `INSERT INTO notifications (user_id, actor_id, type, title, message, link)
+                 VALUES ($1, $2, 'application_received', 'มีคำขอเข้าร่วมทีมใหม่', $3, $4)`,
                 [
                     team.created_by,
+                    user_id,
                     `มีคำขอเข้าร่วมทีม "${team.team_name}"`,
                     `/application/${created.rows[0].application_id}`
                 ]
@@ -284,11 +285,13 @@ exports.reviewApplication = async (id, status, reviewed_by) => {
 
         const outcome = status === 'approved' ? 'ได้รับการอนุมัติ' : 'ถูกปฏิเสธ';
         await client.query(
-            `INSERT INTO notifications (user_id, type, message, link_url)
-             VALUES ($1, $2, $3, $4)`,
+            `INSERT INTO notifications (user_id, actor_id, type, title, message, link)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
             [
                 application.user_id,
+                reviewed_by,
                 `application_${status}`,
+                status === 'approved' ? 'คำขอได้รับการอนุมัติ' : 'คำขอถูกปฏิเสธ',
                 `คำขอเข้าร่วมทีม "${application.team_name}"${outcome}`,
                 `/application/${id}`
             ]
