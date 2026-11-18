@@ -1,5 +1,5 @@
 <%
-  // ===== Data Adapter: รองรับทั้ง preview.js และ PostgreSQL (app.js) =====
+  // ===== Data Adapter: รองรับข้อมูลจากแอปหลัก =====
   const isMock = Boolean(locals.db);
   const curUser = locals.user || null;
 
@@ -18,7 +18,20 @@
     || rawAvatar.includes('profile-anonymous')
     || rawAvatar.includes('profile_anonymous');
 
-  const activeTab = locals.active || '';
+  const currentPath = locals.currentPath || '';
+  const routeTab = curUser?.role === 'admin'
+    ? (currentPath === '/admin' ? 'dash'
+      : currentPath.startsWith('/admin/users') ? 'users'
+      : currentPath.startsWith('/admin/teams') ? 'teams'
+      : currentPath.startsWith('/admin/reports') ? 'reports' : '')
+    : (currentPath === '/' ? 'home'
+      : currentPath.startsWith('/teams') ? 'search'
+      : currentPath.startsWith('/about') ? 'about'
+      : currentPath.startsWith('/guide') ? 'guide'
+      : currentPath.startsWith('/notifications') ? 'notes'
+      : currentPath.startsWith('/favorites') ? 'favorites' : '');
+  const activeTab = routeTab || locals.active || '';
+  const isPath = (path) => currentPath === path || currentPath.startsWith(`${path}/`);
   const unreadCount = Number(locals.unread || 0);
   const pendingCount = Number(locals.pendingPosts || 0);
 
@@ -32,7 +45,8 @@
     ? [
         ['dash', '/admin', 'ภาพรวม'],
         ['users', '/admin/users', 'จัดการผู้ใช้'],
-        ['teams', '/admin/teams', 'จัดการทีม']
+        ['teams', '/admin/teams', 'จัดการทีม'],
+        ['reports', '/admin/reports', 'บันทึกรายงาน']
       ]
     : [
         ['home', '/', 'หน้าแรก'],
@@ -104,16 +118,17 @@
             </div>
 
             <% if (curUser.role === 'admin') { %>
-              <a href="/admin">แดชบอร์ดผู้ดูแล</a>
-              <a href="/admin/users">จัดการผู้ใช้</a>
-              <a href="/admin/teams">จัดการทีม</a>
+              <a class="<%= isPath('/admin') && currentPath === '/admin' ? 'on' : '' %>" href="/admin">แดชบอร์ดผู้ดูแล</a>
+              <a class="<%= isPath('/admin/users') ? 'on' : '' %>" href="/admin/users">จัดการผู้ใช้</a>
+              <a class="<%= isPath('/admin/teams') ? 'on' : '' %>" href="/admin/teams">จัดการทีม</a>
+              <a class="<%= isPath('/admin/reports') ? 'on' : '' %>" href="/admin/reports">บันทึกรายงาน</a>
             <% } else { %>
-              <a href="/profile">โปรไฟล์ของฉัน</a>
-              <a href="/leader/teams">ทีมของฉัน</a>
-              <a href="<%= appsUrl %>">ใบสมัครของฉัน</a>
-              <a href="/leader/teams/new">+ สร้างทีมใหม่</a>
+              <a class="<%= isPath('/profile') ? 'on' : '' %>" href="/profile">โปรไฟล์ของฉัน</a>
+              <a class="<%= isPath('/leader/teams') && currentPath !== '/leader/teams/new' ? 'on' : '' %>" href="/leader/teams">ทีมของฉัน</a>
+              <a class="<%= isPath('/application') ? 'on' : '' %>" href="<%= appsUrl %>">ใบสมัครของฉัน</a>
+              <a class="<%= currentPath === '/leader/teams/new' ? 'on' : '' %>" href="/leader/teams/new">+ สร้างทีมใหม่</a>
             <% } %>
-            <% if (curUser.role !== 'admin') { %><a href="/favorites">ทีมที่บันทึกไว้</a><% } %>
+            <% if (curUser.role !== 'admin') { %><a class="<%= isPath('/favorites') ? 'on' : '' %>" href="/favorites">ทีมที่บันทึกไว้</a><% } %>
 
             <div class="nav-menu-sep"></div>
 
@@ -155,7 +170,32 @@
       menu.setAttribute('hidden', '');
       wrap.querySelector('.nav-avatar')?.setAttribute('aria-expanded', 'false');
     }
+
+    document.querySelectorAll('.admin-user-menu[open]').forEach((userMenu) => {
+      if (!userMenu.contains(e.target)) userMenu.removeAttribute('open');
+    });
+    const summary = e.target.closest('.admin-user-menu > summary');
+    if (summary) {
+      const userMenu = summary.parentElement;
+      requestAnimationFrame(() => {
+        if (!userMenu.open) return;
+        const popover = userMenu.querySelector('.admin-user-menu-popover');
+        if (!popover) return;
+        const rect = summary.getBoundingClientRect();
+        const left = Math.max(8, Math.min(rect.right - popover.offsetWidth, window.innerWidth - popover.offsetWidth - 8));
+        const below = rect.bottom + popover.offsetHeight + 8 <= window.innerHeight;
+        const top = below ? rect.bottom + 6 : Math.max(8, rect.top - popover.offsetHeight - 6);
+        popover.style.left = `${left}px`;
+        popover.style.top = `${top}px`;
+      });
+    }
   });
+
+  const closeAdminUserMenus = () => {
+    document.querySelectorAll('.admin-user-menu[open]').forEach((userMenu) => userMenu.removeAttribute('open'));
+  };
+  window.addEventListener('scroll', closeAdminUserMenus, true);
+  window.addEventListener('resize', closeAdminUserMenus);
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
