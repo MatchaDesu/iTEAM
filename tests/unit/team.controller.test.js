@@ -1,12 +1,12 @@
 jest.mock('../../models/teamModel', () => ({
-    getAll: jest.fn(), getById: jest.fn(), createTeamWithLeader: jest.fn(),
+    getAllPage: jest.fn(), getById: jest.fn(), createTeamWithLeader: jest.fn(),
     updateTeam: jest.fn(), deleteTeam: jest.fn()
 }));
 jest.mock('../../models/teamMemberModel', () => ({
     getTeamsByUserId: jest.fn(), getMembersByTeamId: jest.fn(), checkMember: jest.fn(), removeMember: jest.fn()
 }));
 jest.mock('../../models/applicationModel', () => ({
-    checkPendingApplication: jest.fn(), createApplication: jest.fn(), getByTeamId: jest.fn()
+    checkPendingApplication: jest.fn(), getLatestByUserAndTeam: jest.fn(), createApplication: jest.fn(), getByTeamId: jest.fn()
 }));
 jest.mock('../../models/categoryModel', () => ({ getAll: jest.fn(), getById: jest.fn() }));
 jest.mock('../../models/userModel', () => ({ getAll: jest.fn() }));
@@ -31,7 +31,7 @@ const validCreateBody = overrides => ({
 
 beforeEach(() => {
     jest.clearAllMocks();
-    teamModel.getAll.mockResolvedValue([]);
+    teamModel.getAllPage.mockResolvedValue({ teams: [], total: 0 });
     teamModel.getById.mockResolvedValue({ team_id: 5, team_name: 'Team One', status: 'open', max_members: 5, member_count: 2 });
     categoryModel.getAll.mockResolvedValue([]);
     categoryModel.getById.mockResolvedValue({ category_id: 2 });
@@ -48,18 +48,19 @@ beforeEach(() => {
 
 describe('team.getAll', () => {
     test('renders teams with category filter, search and favorites for signed-in user', async () => {
-        teamModel.getAll.mockResolvedValue([
+        teamModel.getAllPage.mockResolvedValue({ teams: [
             { team_id: 1, team_name: 'Web Team', description: 'Frontend', category_id: 2, category_name: 'Tech', roles: ['UI'] },
             { team_id: 2, team_name: 'Design', description: 'Brand', category_id: 3, category_name: 'Art', roles: [] }
-        ]);
+        ], total: 2 });
         categoryModel.getAll.mockResolvedValue([{ category_id: 2, category_name: 'Tech' }]);
         favoriteModel.getTeamIdsByUserId.mockResolvedValue([1]);
         const req = makeReq({ query: { q: ' ui ', cat: '2' } });
         const res = makeRes();
         await team.getAll(req, res);
         expect(res.render).toHaveBeenCalledWith('teams/explore', expect.objectContaining({
-            teams: [expect.objectContaining({ team_id: 1 })], categories: [{ category_id: 2, category_name: 'Tech' }],
-            favoriteTeamIds: [1], q: ' ui ', cat: '2'
+            teams: expect.arrayContaining([expect.objectContaining({ team_id: 1 })]), categories: [{ category_id: 2, category_name: 'Tech' }],
+            favoriteTeamIds: [1], q: 'ui', cat: '2',
+            pagination: expect.objectContaining({ page: 1, totalPages: 1, total: 2 })
         }));
     });
     test('renders for guest without querying favorite model', async () => {
@@ -69,7 +70,7 @@ describe('team.getAll', () => {
         expect(res.render).toHaveBeenCalledWith('teams/explore', expect.objectContaining({ favoriteTeamIds: [] }));
     });
     test('handles model errors', async () => {
-        teamModel.getAll.mockRejectedValue(new Error('db'));
+        teamModel.getAllPage.mockRejectedValue(new Error('db'));
         jest.spyOn(console, 'error').mockImplementation(() => {});
         const res = makeRes();
         await team.getAll(makeReq(), res);
@@ -97,11 +98,11 @@ describe('team.getById', () => {
     });
     test('loads current user application and favorite state', async () => {
         const application = { status: 'pending' };
-        applicationModel.checkPendingApplication.mockResolvedValue(application);
+        applicationModel.getLatestByUserAndTeam.mockResolvedValue(application);
         favoriteModel.isFavorite.mockResolvedValue(true);
         const res = makeRes();
         await team.getById(makeReq({ params: { teamId: '5' } }), res);
-        expect(applicationModel.checkPendingApplication).toHaveBeenCalledWith(7, 5);
+        expect(applicationModel.getLatestByUserAndTeam).toHaveBeenCalledWith(7, 5);
         expect(favoriteModel.isFavorite).toHaveBeenCalledWith(7, 5);
         expect(res.render).toHaveBeenCalledWith('teams/detail', expect.objectContaining({ myApplication: application, isFavorite: true }));
     });
@@ -304,22 +305,22 @@ describe('leader team pages/actions', () => {
         await team.updateMyTeam(req, res);
         expect(res.redirect).toHaveBeenCalledWith('/leader/teams?team=5&tab=mem');
 
-        req = makeReq({ params: { teamId: '5' }, body: { team_name: ' T ', description: ' D ', category_id: '' } });
+        req = makeReq({ params: { teamId: '5' }, body: { team_name: ' T ', description: ' D ', category_id: '', status: 'open' } });
         res = makeRes();
         await team.updateMyTeam(req, res);
-        expect(teamModel.updateTeam).toHaveBeenCalledWith(5, { team_name: 'T', description: 'D', category_id: null });
+        expect(teamModel.updateTeam).toHaveBeenCalledWith(5, { team_name: 'T', description: 'D', category_id: null, status: 'open' });
         expect(res.redirect).toHaveBeenCalledWith('/leader/teams?team=5&tab=info');
     });
     test('rejects unknown category and handles update errors', async () => {
         categoryModel.getById.mockResolvedValue(null);
-        let req = makeReq({ params: { teamId: '5' }, body: { team_name: 'T', description: 'D', category_id: '99' } });
+        let req = makeReq({ params: { teamId: '5' }, body: { team_name: 'T', description: 'D', category_id: '99', status: 'open' } });
         let res = makeRes();
         await team.updateMyTeam(req, res);
         expect(req.flash).toHaveBeenCalledWith('ไม่พบหมวดหมู่ที่ระบุ');
 
         teamModel.updateTeam.mockRejectedValue(new Error('db'));
         jest.spyOn(console, 'error').mockImplementation(() => {});
-        req = makeReq({ params: { teamId: '5' }, body: { team_name: 'T', description: 'D' } });
+        req = makeReq({ params: { teamId: '5' }, body: { team_name: 'T', description: 'D', status: 'open' } });
         res = makeRes();
         await team.updateMyTeam(req, res);
         expect(req.flash).toHaveBeenCalledWith('บันทึกข้อมูลทีมไม่สำเร็จ');

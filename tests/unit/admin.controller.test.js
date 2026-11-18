@@ -1,125 +1,107 @@
-jest.mock('../../models/adminModel', () => ({ getStats: jest.fn(), getUsers: jest.fn() }));
-jest.mock('../../models/teamModel', () => ({ getAll: jest.fn(), deleteTeam: jest.fn(), updateCategory: jest.fn() }));
-jest.mock('../../models/categoryModel', () => ({ getAll: jest.fn(), getById: jest.fn() }));
+jest.mock('../../models/adminModel', () => ({
+    getStats: jest.fn(), getUsersPage: jest.fn(), getUserById: jest.fn(), setMemberBanned: jest.fn()
+}));
+jest.mock('../../models/teamModel', () => ({ getAllPage: jest.fn(), getById: jest.fn() }));
+jest.mock('../../models/teamMemberModel', () => ({ getTeamsByUserId: jest.fn(), getMembersByTeamId: jest.fn() }));
 
 const adminModel = require('../../models/adminModel');
 const teamModel = require('../../models/teamModel');
-const categoryModel = require('../../models/categoryModel');
+const teamMemberModel = require('../../models/teamMemberModel');
 const admin = require('../../controllers/admin.controller');
 const { makeReq, makeRes } = require('../helpers/http');
 
 beforeEach(() => {
     jest.clearAllMocks();
     adminModel.getStats.mockResolvedValue({ total_users: 1 });
-    adminModel.getUsers.mockResolvedValue([]);
-    teamModel.getAll.mockResolvedValue([]);
-    teamModel.deleteTeam.mockResolvedValue({ changes: 1 });
-    teamModel.updateCategory.mockResolvedValue({ changes: 1 });
-    categoryModel.getAll.mockResolvedValue([]);
-    categoryModel.getById.mockResolvedValue({ category_id: 2 });
+    adminModel.getUsersPage.mockResolvedValue({ users: [], total: 0 });
+    adminModel.getUserById.mockResolvedValue({ user_id: 9 });
+    adminModel.setMemberBanned.mockResolvedValue(true);
+    teamModel.getAllPage.mockResolvedValue({ teams: [], total: 0 });
+    teamModel.getById.mockResolvedValue({ team_id: 9 });
+    teamMemberModel.getTeamsByUserId.mockResolvedValue([]);
+    teamMemberModel.getMembersByTeamId.mockResolvedValue([]);
 });
 
-describe('admin read pages', () => {
+describe('admin pages', () => {
     test('dashboard renders stats', async () => {
         const res = makeRes();
         await admin.dashboard(makeReq(), res);
         expect(res.render).toHaveBeenCalledWith('admin/dashboard', { stats: { total_users: 1 } });
     });
-    test('dashboard handles DB error', async () => {
-        adminModel.getStats.mockRejectedValue(new Error('db'));
-        jest.spyOn(console, 'error').mockImplementation(() => {});
-        const res = makeRes();
-        await admin.dashboard(makeReq(), res);
-        expect(res.status).toHaveBeenCalledWith(500);
-    });
-    test('users rejects unknown role and treats empty role as all', async () => {
-        const req = makeReq({ query: { role: 'owner' } });
-        const res = makeRes();
-        await admin.getUsers(req, res);
-        expect(req.flash).toHaveBeenCalled();
-        expect(adminModel.getUsers).not.toHaveBeenCalled();
 
-        const allReq = makeReq({ query: { role: '' } });
-        await admin.getUsers(allReq, makeRes());
-        expect(adminModel.getUsers).toHaveBeenCalledWith(undefined);
-    });
-    test('users filters case-insensitively on names, username and email', async () => {
-        adminModel.getUsers.mockResolvedValue([
-            { username: 'alice', first_name: 'Alice', last_name: 'One', email: 'a@x.test' },
-            { username: 'bob', first_name: 'Bob', last_name: 'Two', email: 'b@x.test' }
-        ]);
+    test('users validates role and loads a trimmed, paginated search', async () => {
+        let req = makeReq({ query: { role: 'owner' } });
+        await admin.getUsers(req, makeRes());
+        expect(req.flash).toHaveBeenCalled();
+        expect(adminModel.getUsersPage).not.toHaveBeenCalled();
+
         const res = makeRes();
-        await admin.getUsers(makeReq({ query: { role: 'member', q: ' ALICE ' } }), res);
-        expect(res.render).toHaveBeenCalledWith('admin/users', {
-            users: [expect.objectContaining({ username: 'alice' })], role: 'member', q: 'alice'
-        });
-    });
-    test('teams filter by text and category', async () => {
-        teamModel.getAll.mockResolvedValue([
-            { team_name: 'Code', description: 'Web', category_name: 'Tech' },
-            { team_name: 'Art', description: 'Brand', category_name: 'Design' }
-        ]);
-        categoryModel.getAll.mockResolvedValue([{ category_name: 'Tech' }]);
-        const res = makeRes();
-        await admin.getTeams(makeReq({ query: { q: 'web', cat: 'Tech' } }), res);
-        expect(res.render).toHaveBeenCalledWith('admin/teams', expect.objectContaining({
-            teams: [expect.objectContaining({ team_name: 'Code' })], categories: [{ category_name: 'Tech' }]
+        await admin.getUsers(makeReq({ query: { role: 'member', q: ' Alice ', page: '2' } }), res);
+        expect(adminModel.getUsersPage).toHaveBeenCalledWith({ role: 'member', q: 'Alice', limit: 10, offset: 10 });
+        expect(res.render).toHaveBeenCalledWith('admin/users', expect.objectContaining({
+            users: [], role: 'member', q: 'Alice', currentUserId: 7,
+            pagination: expect.objectContaining({ page: 1, totalPages: 1, total: 0 })
         }));
     });
-    test.each(['getUsers', 'getTeams'])('%s returns server error on model failure', async handler => {
-        adminModel.getUsers.mockRejectedValue(new Error('db'));
-        teamModel.getAll.mockRejectedValue(new Error('db'));
-        categoryModel.getAll.mockRejectedValue(new Error('db'));
+
+    test('teams loads paginated search', async () => {
+        const res = makeRes();
+        await admin.getTeams(makeReq({ query: { q: ' design ' } }), res);
+        expect(teamModel.getAllPage).toHaveBeenCalledWith({ q: 'design', limit: 10, offset: 0 });
+        expect(res.render).toHaveBeenCalledWith('admin/teams', expect.objectContaining({
+            teams: [], q: 'design', pagination: expect.objectContaining({ page: 1, totalPages: 1, total: 0 })
+        }));
+    });
+
+    test.each([
+        ['getUsers', adminModel.getUsersPage], ['getTeams', teamModel.getAllPage], ['dashboard', adminModel.getStats]
+    ])('%s handles model errors', async (handler, modelMethod) => {
+        modelMethod.mockRejectedValue(new Error('db'));
         jest.spyOn(console, 'error').mockImplementation(() => {});
         const res = makeRes();
         await admin[handler](makeReq(), res);
         expect(res.status).toHaveBeenCalledWith(500);
     });
+
+    test('renders user details and returns 404 for missing users', async () => {
+        const res = makeRes();
+        await admin.getUserDetails(makeReq({ params: { userId: '9' } }), res);
+        expect(res.render).toHaveBeenCalledWith('users/detail_profile', {
+            profileUser: { user_id: 9 }, teams: [], adminReadOnly: true
+        });
+        adminModel.getUserById.mockResolvedValueOnce(null);
+        const missing = makeRes();
+        await admin.getUserDetails(makeReq({ params: { userId: '9' } }), missing);
+        expect(missing.status).toHaveBeenCalledWith(404);
+    });
+
+    test('renders team details read-only', async () => {
+        const res = makeRes();
+        await admin.getTeamDetails(makeReq({ params: { teamId: '9' } }), res);
+        expect(res.render).toHaveBeenCalledWith('teams/detail', expect.objectContaining({
+            team: { team_id: 9 }, members: [], adminReadOnly: true, isFavorite: false
+        }));
+    });
 });
 
-describe('admin mutations', () => {
-    test('deleteTeam validates ID, handles missing row and success', async () => {
-        let req = makeReq({ params: { teamId: 'bad' } });
-        let res = makeRes();
-        await admin.deleteTeam(req, res);
-        expect(teamModel.deleteTeam).not.toHaveBeenCalled();
-        expect(req.flash).toHaveBeenCalledWith('ทีมไม่ถูกต้อง');
+describe('admin ban actions', () => {
+    test('blocks invalid IDs and self-ban', async () => {
+        let req = makeReq({ params: { userId: 'x' } });
+        await admin.banUser(req, makeRes());
+        expect(adminModel.setMemberBanned).not.toHaveBeenCalled();
+        expect(req.flash).toHaveBeenCalledWith('ข้อมูลการเปลี่ยนสถานะผู้ใช้ไม่ถูกต้อง');
 
-        teamModel.deleteTeam.mockResolvedValueOnce({ changes: 0 });
-        req = makeReq({ params: { teamId: '9' } }); res = makeRes();
-        await admin.deleteTeam(req, res);
-        expect(req.flash).toHaveBeenCalledWith('ไม่พบทีม');
-
-        teamModel.deleteTeam.mockResolvedValueOnce({ changes: 1 });
-        req = makeReq({ params: { teamId: '9' } }); res = makeRes();
-        await admin.deleteTeam(req, res);
-        expect(req.flash).toHaveBeenCalledWith('ลบทีมแล้ว');
+        req = makeReq({ params: { userId: '7' } });
+        await admin.banUser(req, makeRes());
+        expect(adminModel.setMemberBanned).not.toHaveBeenCalled();
+        expect(req.flash).toHaveBeenCalledWith('ไม่สามารถแบนบัญชีของตัวเองได้');
     });
-    test('deleteTeam handles DB errors', async () => {
-        teamModel.deleteTeam.mockRejectedValue(new Error('db'));
-        jest.spyOn(console, 'error').mockImplementation(() => {});
-        const req = makeReq({ params: { teamId: '9' } });
-        await admin.deleteTeam(req, makeRes());
-        expect(req.flash).toHaveBeenCalledWith('ลบทีมไม่สำเร็จ');
-    });
-    test('updates a team category, allows clearing it, and validates IDs', async () => {
-        let req = makeReq({ params: { teamId: 'bad' }, body: { category_id: '2' } });
-        await admin.updateTeamCategory(req, makeRes());
-        expect(teamModel.updateCategory).not.toHaveBeenCalled();
-        expect(req.flash).toHaveBeenCalledWith('ทีม/หมวดหมู่ไม่ถูกต้อง');
 
-        req = makeReq({ params: { teamId: '9' }, body: { category_id: '999' } });
-        categoryModel.getById.mockResolvedValueOnce(null);
-        await admin.updateTeamCategory(req, makeRes());
-        expect(teamModel.updateCategory).not.toHaveBeenCalled();
-
-        req = makeReq({ params: { teamId: '9' }, body: { category_id: '2' } });
-        await admin.updateTeamCategory(req, makeRes());
-        expect(teamModel.updateCategory).toHaveBeenCalledWith(9, 2);
-        expect(req.flash).toHaveBeenCalledWith('อัปเดตหมวดหมู่ทีมแล้ว');
-
-        req = makeReq({ params: { teamId: '9' }, body: { category_id: '' } });
-        await admin.updateTeamCategory(req, makeRes());
-        expect(teamModel.updateCategory).toHaveBeenCalledWith(9, null);
+    test.each([['banUser', true], ['unbanUser', false]])('%s changes member ban state', async (handler, banned) => {
+        const req = makeReq({ params: { userId: '9' }, body: { page: '2', q: 'x' } });
+        const res = makeRes();
+        await admin[handler](req, res);
+        expect(adminModel.setMemberBanned).toHaveBeenCalledWith(9, banned);
+        expect(res.redirect).toHaveBeenCalledWith('/admin/users?q=x&page=2');
     });
 });

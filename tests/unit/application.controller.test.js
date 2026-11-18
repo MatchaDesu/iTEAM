@@ -119,7 +119,7 @@ describe('cancel application', () => {
         await application.cancelMine(req, res);
         expect(applicationModel.deleteApplication).toHaveBeenCalledWith(3);
         expect(req.flash).toHaveBeenCalledWith('ยกเลิกใบสมัครแล้ว');
-        expect(res.redirect).toHaveBeenCalledWith('/application');
+        expect(res.redirect).toHaveBeenCalledWith('/teams/5');
     });
     test('handles DB failure', async () => {
         applicationModel.getById.mockRejectedValue(new Error('db'));
