@@ -33,8 +33,11 @@ app.use((req, res, next) => {
 
 // Admin accounts use the dedicated dashboard, not member pages.
 app.use((req, res, next) => {
+    const isOwnProfileRoute = req.path === '/profile'
+        || req.path === '/profile/edit';
     if (req.user?.role === 'admin'
         && !req.path.startsWith('/admin')
+        && !isOwnProfileRoute
         && !(req.method === 'POST' && req.path === '/auth/logout')) {
         return res.redirect('/admin');
     }

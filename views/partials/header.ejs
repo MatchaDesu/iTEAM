@@ -119,6 +119,7 @@
 
             <% if (curUser.role === 'admin') { %>
               <a class="<%= isPath('/admin') && currentPath === '/admin' ? 'on' : '' %>" href="/admin">แดชบอร์ดผู้ดูแล</a>
+              <a class="<%= isPath('/profile') ? 'on' : '' %>" href="/profile">โปรไฟล์ของฉัน</a>
               <a class="<%= isPath('/admin/users') ? 'on' : '' %>" href="/admin/users">จัดการผู้ใช้</a>
               <a class="<%= isPath('/admin/teams') ? 'on' : '' %>" href="/admin/teams">จัดการทีม</a>
               <a class="<%= isPath('/admin/reports') ? 'on' : '' %>" href="/admin/reports">บันทึกรายงาน</a>
