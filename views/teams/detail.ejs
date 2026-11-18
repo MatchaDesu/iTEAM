@@ -1,5 +1,5 @@
 <%
-  // ===== 1. Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
+  // ===== 1. Data Adapter: รองรับข้อมูลจากแอปหลัก =====
   const isMock = Boolean(locals.db);
   const t = locals.team || locals.t || {};
   const tId = t.team_id ?? t.id;
@@ -17,7 +17,7 @@
   const curUserId = curUser ? (curUser.user_id ?? curUser.id) : null;
   const isLeader = Boolean(curUserId && leaderId && String(curUserId) === String(leaderId));
 
-  // แปลงรายชื่อสมาชิกให้เป็นรูปแบบเดียวกันทั้งจาก PostgreSQL และ preview.js
+  // แปลงรายชื่อสมาชิกให้อยู่ในรูปแบบเดียวกัน
   const mockUsers = Array.isArray(locals.db?.users) ? locals.db.users : [];
   const rawMembers = Array.isArray(locals.members)
     ? locals.members

@@ -1,5 +1,5 @@
 <%
-  // ===== 1. Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
+  // ===== 1. Data Adapter: รองรับข้อมูลจากแอปหลัก =====
   const curUser = locals.user || null;
   const curUserId = curUser ? (curUser.user_id ?? curUser.id) : null;
 
@@ -19,7 +19,7 @@
     leaderTeams = locals.teams.filter(t => t.team_role === 'leader');
     memberTeams = locals.teams.filter(t => t.team_role !== 'leader');
   } else if (mockTeams.length && curUserId !== null) {
-    // กรณีข้อมูลจำลองจาก preview.js
+    // กรณีข้อมูลจำลอง
     leaderTeams = mockTeams.filter(t => String(t.leader) === String(curUserId));
     memberTeams = mockTeams.filter(
       t => Array.isArray(t.members)

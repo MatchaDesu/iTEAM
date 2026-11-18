@@ -1,8 +1,8 @@
 <%
-  // ===== Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
+  // ===== Data Adapter: รองรับข้อมูลจากแอปหลัก =====
   const u = locals.user || {};
 
-  // กรณีรันใน preview.js ที่เก็บชื่อรวมใน u.name ให้แยกชื่อจริง-นามสกุลให้อัตโนมัติ
+  // กรณีข้อมูลจำลองที่เก็บชื่อรวมใน u.name ให้แยกชื่อจริง-นามสกุลให้อัตโนมัติ
   let valFirst = u.first_name || '';
   let valLast = u.last_name || '';
   if (!valFirst && u.name) {

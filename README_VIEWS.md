@@ -80,7 +80,7 @@ teams: JOIN team_members กับ teams และ LEFT JOIN categories เพ�
 | users/edit | user | ใช้ข้อมูล user ชุดเดียวกับหน้าโปรไฟล์ |
 | applications/index | applications | JOIN applications กับ teams และ LEFT JOIN categories เพื่อส่ง application_id, team_id, team_name, category_name, message, status |
 4. เส้นทางรับข้อมูลจากฟอร์ม (POST Endpoints & req.body)
-เมื่อเลิกใช้ preview.js (ไม่มีตัวแปร locals.db) ฟอร์มในหน้าเว็บจะส่งข้อมูลไปที่ URL มาตรฐานเหล่านี้โดยอัตโนมัติ:
+เมื่อใช้แอปหลัก (`app.js`) ฟอร์มในหน้าเว็บจะส่งข้อมูลไปที่ URL มาตรฐานเหล่านี้:
 4.1 สร้างทีมใหม่ (POST /teams) — จาก leader/create-team.ejs
  * ค่าที่รับจาก req.body: team_name, category_id, max_members, description, roles (ข้อความคั่นด้วยจุลภาค เช่น "Figma, Node.js"), initial_members (JSON String)
  * โครงสร้าง initial_members หลังแปลงด้วย JSON.parse(req.body.initial_members || '[]'):

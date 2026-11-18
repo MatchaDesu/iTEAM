@@ -1,5 +1,5 @@
 <%
-  // ===== 1. Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
+  // ===== 1. Data Adapter: รองรับข้อมูลจากแอปหลัก =====
   const u = locals.profileUser || locals.user || {};
   const uId = u.user_id ?? u.id ?? null;
 
@@ -32,7 +32,7 @@
     leaderTeams = locals.teams.filter(t => t.team_role === 'leader');
     memberTeams = locals.teams.filter(t => t.team_role !== 'leader');
   } else if (Array.isArray(locals.db?.teams) && uId !== null) {
-    // กรณีข้อมูลจำลองจาก preview.js
+    // กรณีข้อมูลจำลอง
     leaderTeams = locals.db.teams.filter(t => String(t.leader) === String(uId));
     memberTeams = locals.db.teams.filter(
       t => Array.isArray(t.members)
@@ -41,7 +41,7 @@
     );
   }
 
-  // ===== 3. ดึงรายการใบสมัครของผู้ใช้ (รองรับทั้ง PostgreSQL และ preview.js) =====
+  // ===== 3. ดึงรายการใบสมัครของผู้ใช้ =====
   const mockTeams = Array.isArray(locals.db?.teams) ? locals.db.teams : [];
   let myApps = [];
 

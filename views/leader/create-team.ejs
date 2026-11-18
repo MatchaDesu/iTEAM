@@ -1,5 +1,5 @@
 <%
-  // ===== Data Adapter: รองรับทั้งข้อมูลจาก preview.js และ PostgreSQL =====
+  // ===== Data Adapter: รองรับข้อมูลจากแอปหลัก =====
   const catList = locals.categories || locals.cats || [];
   const curUser = locals.user || null;
   const curUserId = curUser ? (curUser.user_id ?? curUser.id) : null;
