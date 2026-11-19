@@ -8,6 +8,13 @@ const { isTeamLeader } = require('../utils/teamAccess');
 const { parseId } = require('../utils/currentUser');
 const PAGE_SIZE = 10;
 
+// Category IDs come from the database; unlike user/team IDs, an existing category may use 0.
+const parseCategoryId = (value) => {
+    if (typeof value !== 'string' && typeof value !== 'number') return null;
+    const id = Number(value);
+    return Number.isSafeInteger(id) && id >= 0 ? id : null;
+};
+
 const requestedPage = (value) => {
     const page = Number(value);
     return Number.isInteger(page) && page > 0 ? Math.min(page, 1000000) : 1;
@@ -217,8 +224,8 @@ exports.create = async (req, res) => {
     try {
         let categoryId = null;
         if (category_id !== undefined && category_id !== null && category_id !== '') {
-            categoryId = parseId(category_id);
-            if (!categoryId || !(await categoryModel.getById(categoryId))) {
+            categoryId = parseCategoryId(category_id);
+            if (categoryId === null || !(await categoryModel.getById(categoryId))) {
                 req.flash('ไม่พบหมวดหมู่ที่ระบุ');
                 return res.redirect('/leader/teams/new');
             }
@@ -303,8 +310,9 @@ exports.updateMyTeam = async (req, res) => {
         return res.redirect(`/leader/teams?team=${teamId}&tab=${tab}`);
     }
     try {
-        const categoryId = category_id ? parseId(category_id) : null;
-        if (category_id && (!categoryId || !(await categoryModel.getById(categoryId)))) {
+        const hasCategory = category_id !== undefined && category_id !== null && category_id !== '';
+        const categoryId = hasCategory ? parseCategoryId(category_id) : null;
+        if (hasCategory && (categoryId === null || !(await categoryModel.getById(categoryId)))) {
             req.flash('ไม่พบหมวดหมู่ที่ระบุ');
             return res.redirect(`/leader/teams?team=${teamId}&tab=${tab}`);
         }
